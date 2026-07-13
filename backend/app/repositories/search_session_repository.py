@@ -68,6 +68,7 @@ class SearchSessionRepository:
         input_summary: str | None,
         output_summary: str | None,
         duration_ms: int,
+        token_usage: int | None = None,
         tool_names: list[str] | None = None,
         error_message: str | None = None,
     ) -> ExecutionTrace:
@@ -79,6 +80,7 @@ class SearchSessionRepository:
             input_summary=input_summary,
             output_summary=output_summary,
             duration_ms=duration_ms,
+            token_usage=token_usage,
             tool_names=tool_names or [],
             error_message=error_message,
         )

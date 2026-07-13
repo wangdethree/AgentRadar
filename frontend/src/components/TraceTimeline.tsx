@@ -32,7 +32,10 @@ export function TraceTimeline({ traces }: TraceTimelineProps) {
               <strong>{nodeLabels[trace.node_name] ?? trace.node_name}</strong>
               <p>{trace.output_summary ?? trace.error_message ?? '已完成'}</p>
               {trace.tool_names.length > 0 && (
-                <small>工具：{trace.tool_names.join(' · ')}</small>
+                <small>
+                  工具：{trace.tool_names.join(' · ')}
+                  {trace.token_usage !== null && ` · Token：${trace.token_usage}`}
+                </small>
               )}
             </div>
             <time>{trace.duration_ms ?? 0} ms</time>
@@ -42,4 +45,3 @@ export function TraceTimeline({ traces }: TraceTimelineProps) {
     </section>
   )
 }
-

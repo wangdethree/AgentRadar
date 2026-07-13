@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.agents.graph import SearchWorkflow
-from app.api.dependencies import get_github_client
+from app.api.dependencies import get_github_client, get_llm_client
 from app.core.database import get_db
+from app.providers.llm import LLMClient
 from app.repositories.search_session_repository import SearchSessionRepository
 from app.schemas.search import (
     ExecutionTraceResponse,
@@ -23,6 +24,7 @@ router = APIRouter(prefix="/search/sessions", tags=["智能搜索"])
 
 DatabaseSession = Annotated[Session, Depends(get_db)]
 GitHubClientDependency = Annotated[GitHubClient, Depends(get_github_client)]
+LLMClientDependency = Annotated[LLMClient | None, Depends(get_llm_client)]
 
 
 @router.post(
@@ -35,9 +37,10 @@ async def create_search_session(
     payload: SearchSessionCreate,
     db: DatabaseSession,
     github_client: GitHubClientDependency,
+    llm_client: LLMClientDependency,
 ) -> SearchExecutionResponse:
     """执行智能搜索基础链路，并返回最多五个研究目标。"""
-    state = await SearchWorkflow(db, github_client).run(payload.query)
+    state = await SearchWorkflow(db, github_client, llm_client).run(payload.query)
     search_session = SearchSessionRepository(db).get(state["session_id"])
     if search_session is None:  # pragma: no cover - 工作流内部一致性保护
         raise HTTPException(status_code=500, detail="搜索会话保存失败")
@@ -48,6 +51,8 @@ async def create_search_session(
         screened_count=len(state["screened_repositories"]),
         research_targets=state["research_targets"],
         final_recommendations=state["final_recommendations"],
+        llm_call_count=state["llm_call_count"],
+        errors=state["errors"],
     )
 
 
@@ -70,12 +75,16 @@ async def refine_search_session(
     payload: SearchSessionRefine,
     db: DatabaseSession,
     github_client: GitHubClientDependency,
+    llm_client: LLMClientDependency,
 ) -> SearchExecutionResponse:
     """复用当前候选和已有分析报告，按追加条件重新推荐。"""
     store = SearchSessionRepository(db)
     if store.get(session_id) is None:
         raise HTTPException(status_code=404, detail="搜索会话不存在")
-    state = await SearchWorkflow(db, github_client).refine(session_id, payload.feedback)
+    state = await SearchWorkflow(db, github_client, llm_client).refine(
+        session_id,
+        payload.feedback,
+    )
     search_session = store.get(session_id)
     if search_session is None:  # pragma: no cover - 内部一致性保护
         raise HTTPException(status_code=500, detail="搜索会话保存失败")
@@ -86,6 +95,8 @@ async def refine_search_session(
         screened_count=len(state["screened_repositories"]),
         research_targets=state["research_targets"],
         final_recommendations=state["final_recommendations"],
+        llm_call_count=state["llm_call_count"],
+        errors=state["errors"],
     )
 
 

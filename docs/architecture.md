@@ -10,6 +10,7 @@ flowchart LR
     N --> A["FastAPI API"]
     A --> G["LangGraph 搜索工作流"]
     G --> R["确定性规则与评分"]
+    G -. "可选结构化增强" .-> L["OpenAI-compatible LLM"]
     G --> C["GitHub 只读客户端"]
     C --> GH["GitHub REST API"]
     A --> DB["PostgreSQL / SQLite"]
@@ -26,7 +27,7 @@ flowchart LR
 | API | 参数校验、依赖注入、HTTP 错误映射 | `backend/app/api` |
 | Agent | 搜索状态、节点编排、会话内继续筛选 | `backend/app/agents` |
 | Service | 需求解析、过滤、研究、评分、趋势计算 | `backend/app/services` |
-| Tool | GitHub 请求、裁剪、重试、缓存和限流错误 | `backend/app/tools` |
+| Provider/Tool | 结构化模型调用；GitHub 请求、裁剪、重试、缓存和限流错误 | `backend/app/providers`、`backend/app/tools` |
 | Repository | SQLAlchemy 读写和幂等更新 | `backend/app/repositories` |
 | Model/Schema | 数据库存储结构和稳定 API 契约 | `backend/app/models`、`backend/app/schemas` |
 | Task | 热门项目定时采集 | `backend/app/tasks` |
@@ -55,7 +56,9 @@ flowchart TD
 
 ## 规则与 Agent 职责
 
-V1 把可确定的问题交给规则：去重、fork/归档/过旧过滤、排除项、真实路径校验、趋势计算和六维评分。LangGraph 负责状态编排、失败隔离和可观测轨迹。当前离线基线不调用模型，保证 CI 可复现；后续接入模型时也必须输出结构化结果，并保留规则过滤和证据校验作为安全边界。
+V1 把可确定的问题交给规则：去重、fork/归档/过旧过滤、排除项、真实路径校验、趋势计算和六维评分。LangGraph 负责状态编排、失败隔离和可观测轨迹。模型是可选增强层，只参与自然语言需求解析和既有候选的相关度、调查等级判断，不能创建新仓库，也不能绕过排除规则。模型输出必须通过 Pydantic Schema 校验；超时、限流、网络或结构错误会记录错误码并回退到规则结果。
+
+离线评测明确不配置模型，保证 CI 可复现。联网运行启用模型后，每个模型节点会记录调用次数、工具名称和服务返回的总令牌数，用于观察质量与成本；密钥和完整原始响应不进入执行轨迹。
 
 ## 数据模型
 
@@ -80,6 +83,7 @@ erDiagram
 ## 关键可靠性设计
 
 - GitHub 客户端统一超时、有限重试、TTL 缓存和标准错误码；
+- 模型客户端统一超时、有限重试、严格 JSON Schema 和提示注入边界；
 - README、文件和目录树都有大小、深度和数量上限；
 - 阅读路径只能从真实目录树选取，固定评测要求幻觉率为 0；
 - PostgreSQL 使用 Alembic 迁移，容器启动时自动升级到 `head`；

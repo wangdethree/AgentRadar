@@ -70,6 +70,8 @@ export interface SearchExecutionResponse {
   filtered_count: number
   screened_count: number
   final_recommendations: RecommendationCardData[]
+  llm_call_count: number
+  errors: Array<Record<string, unknown>>
 }
 
 export interface ExecutionTrace {
@@ -79,6 +81,7 @@ export interface ExecutionTrace {
   input_summary: string | null
   output_summary: string | null
   duration_ms: number | null
+  token_usage: number | null
   tool_names: string[]
   error_message: string | null
   created_at: string
@@ -108,4 +111,3 @@ export interface Favorite {
   created_at: string
   repository: RepositorySummary
 }
-

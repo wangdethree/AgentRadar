@@ -127,3 +127,5 @@ class SearchExecutionResponse(BaseModel):
     screened_count: int
     research_targets: list[ScreenedRepository] = Field(default_factory=list)
     final_recommendations: list[RecommendationCard] = Field(default_factory=list)
+    llm_call_count: int = 0
+    errors: list[dict[str, object]] = Field(default_factory=list)

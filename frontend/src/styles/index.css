@@ -314,7 +314,8 @@ h1 span {
 }
 
 .error-banner,
-.notice-banner {
+.notice-banner,
+.warning-banner {
   max-width: 900px;
   margin: 18px 0 0;
   padding: 13px 16px;
@@ -332,6 +333,12 @@ h1 span {
   border: 1px solid rgba(81, 230, 162, 0.28);
   color: var(--green);
   background: rgba(16, 80, 57, 0.14);
+}
+
+.warning-banner {
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  color: #fde68a;
+  background: rgba(113, 63, 18, 0.16);
 }
 
 .results {

@@ -57,6 +57,12 @@ docker compose exec backend python -m app.demo
 
 Compose 默认启动 PostgreSQL 16、Python 3.11 后端和前端 Nginx。容器启动后，统一入口为 <http://localhost:8080>，后端 API 仍可通过 <http://localhost:8000> 直接访问。首次启动前请修改 `.env` 的 PostgreSQL 密码和对应连接串，完整步骤见 [部署文档](docs/deployment.md)。
 
+### 可选模型增强
+
+智能搜索默认使用确定性规则，可在无模型、无费用的环境运行。配置兼容 OpenAI Chat Completions 协议的 `LLM_BASE_URL` 与 `LLM_MODEL` 后，系统会用结构化模型增强需求解析和候选调查等级判断；`LLM_API_KEY` 按服务要求选填。模型超时、限流、网络错误或结构校验失败时，当前搜索会自动回退到规则结果，不会中断 GitHub 研究流程。
+
+每次模型调用都会写入搜索执行轨迹，包括节点名称、调用工具和服务返回的总令牌数；密钥、完整提示词和外部原始响应不会持久化。
+
 ## 质量检查
 
 ```bash

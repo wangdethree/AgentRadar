@@ -28,12 +28,22 @@ class Settings(BaseSettings):
     github_cache_ttl_seconds: int = 300
     trending_scheduler_enabled: bool = False
     trending_collection_interval_hours: int = 6
+    llm_api_key: str | None = None
+    llm_base_url: str | None = None
+    llm_model: str | None = None
+    llm_timeout_seconds: float = 30.0
+    llm_max_retries: int = 1
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def cors_origins(self) -> list[str]:
         """把逗号分隔的前端地址转换为 CORS 配置列表。"""
         return [origin.strip() for origin in self.backend_cors_origins.split(",") if origin.strip()]
+
+    @property
+    def llm_configured(self) -> bool:
+        """只有地址和模型都存在时才启用可选模型增强。"""
+        return bool(self.llm_base_url and self.llm_model)
 
 
 @lru_cache

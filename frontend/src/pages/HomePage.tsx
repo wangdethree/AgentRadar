@@ -175,6 +175,12 @@ export function HomePage() {
               最终推荐 {searchResult.final_recommendations.length} 个项目。
             </p>
           </div>
+          {searchResult.errors.length > 0 && (
+            <p className="warning-banner">
+              本次调查有 {searchResult.errors.length} 个步骤使用了降级结果，最终推荐仍已完成；
+              可在执行轨迹中查看对应节点。
+            </p>
+          )}
           {searchResult.final_recommendations.length === 0 && (
             <p className="empty-state">当前条件下没有足够证据的项目，请放宽限制后重试。</p>
           )}

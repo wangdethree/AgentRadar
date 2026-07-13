@@ -62,6 +62,8 @@ def test_create_search_session_and_read_traces() -> None:
         assert len(response.json()["research_targets"]) == 1
         assert traces_response.status_code == 200
         assert len(response.json()["final_recommendations"]) == 1
+        assert response.json()["llm_call_count"] == 0
+        assert response.json()["errors"] == []
         assert response.json()["final_recommendations"][0]["report"]["reading_path"]
         assert len(traces_response.json()) == 10
         assert results_response.status_code == 200

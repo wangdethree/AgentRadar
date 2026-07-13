@@ -10,6 +10,18 @@ cp .env.example .env
 
 至少修改 `.env` 中的 `POSTGRES_PASSWORD` 和 `COMPOSE_DATABASE_URL`，二者密码必须一致。建议同时配置 `GITHUB_TOKEN`，否则 GitHub 匿名 API 配额较低。
 
+模型增强是可选能力。接入兼容 OpenAI Chat Completions 协议的服务时设置：
+
+```dotenv
+LLM_API_KEY=replace-with-secret
+LLM_BASE_URL=https://your-provider.example/v1
+LLM_MODEL=your-model-name
+LLM_TIMEOUT_SECONDS=30
+LLM_MAX_RETRIES=1
+```
+
+`LLM_BASE_URL` 可以填写 API 根地址，也可以直接填写以 `/chat/completions` 结尾的完整地址。只有 `LLM_BASE_URL` 和 `LLM_MODEL` 同时存在时才启用模型；不需要鉴权的本地服务可以留空 `LLM_API_KEY`。服务必须支持 Chat Completions 的 JSON 响应和 `response_format={"type":"json_object"}`。模型不可用时搜索会降级到确定性规则，因此无需把模型健康状态加入容器启动依赖。
+
 ```bash
 docker compose up --build -d
 docker compose ps
@@ -73,12 +85,12 @@ npm run dev
 
 ## 生产注意事项
 
-- 使用密钥管理服务注入 GitHub Token 和数据库密码，不要提交 `.env`；
+- 使用密钥管理服务注入 GitHub Token、模型密钥和数据库密码，不要提交 `.env`；
 - `DEBUG=false`，并把 `BACKEND_CORS_ORIGINS` 限制为实际域名；
 - TLS 应在反向代理或云负载均衡终止；
 - 定期备份 PostgreSQL，并在升级前验证 Alembic 迁移；
 - 多后端副本时关闭各副本的 `TRENDING_SCHEDULER_ENABLED`，改由单独 Worker 调度；
-- 对 GitHub API 错误率、限流剩余量、搜索耗时和失败会话建立监控。
+- 对 GitHub API 错误率、限流剩余量、模型降级率与令牌量、搜索耗时和失败会话建立监控。
 
 ## 当前验证范围
 

@@ -8,11 +8,16 @@ from sqlalchemy.orm import Session
 
 from app.agents.state import SearchSessionState
 from app.models.search import SearchSession
+from app.providers.llm import LLMClient, LLMProviderError
 from app.repositories.analysis_repository import AnalysisReportRepository
 from app.repositories.interaction_repository import InteractionRepository
 from app.repositories.search_session_repository import SearchSessionRepository
 from app.schemas.github import RepositorySummary
 from app.services.filter_service import normalize_and_filter, screen_candidates
+from app.services.llm_enhancement_service import (
+    parse_requirement_with_llm,
+    screen_candidates_with_llm,
+)
 from app.services.requirement_service import build_search_plan, parse_requirement
 from app.services.research_service import ResearchService
 from app.services.scoring_service import build_recommendations
@@ -27,9 +32,15 @@ NodeOperation = Callable[[SearchSessionState], Awaitable[NodeResult]]
 class SearchWorkflow:
     """执行需求理解、搜索、过滤、初筛、目标选择和持久化。"""
 
-    def __init__(self, session: Session, github_client: GitHubClient) -> None:
+    def __init__(
+        self,
+        session: Session,
+        github_client: GitHubClient,
+        llm_client: LLMClient | None = None,
+    ) -> None:
         self.session_store = SearchSessionRepository(session)
         self.github_client = github_client
+        self.llm_client = llm_client
 
     async def run(
         self,
@@ -75,11 +86,53 @@ class SearchWorkflow:
         combined_query = f"{search_session.user_query}\n追加筛选条件：{feedback}"
         try:
             requirement = parse_requirement(combined_query)
+            llm_call_count = 0
+            token_usage: int | None = None
+            errors: list[dict[str, object]] = []
+            llm_tools: list[str] = []
+            if self.llm_client is not None:
+                llm_call_count += 1
+                llm_tools.append("llm:parse_requirement")
+                try:
+                    parse_result = await parse_requirement_with_llm(
+                        self.llm_client,
+                        combined_query,
+                    )
+                    requirement = parse_result.data
+                    token_usage = parse_result.total_tokens
+                except LLMProviderError as error:
+                    errors.append(
+                        {
+                            "node": "refine_session",
+                            "operation": "parse_requirement",
+                            "code": error.code,
+                        }
+                    )
             plan = build_search_plan(requirement)
             repositories = [
                 RepositorySummary.model_validate(item.repository) for item in existing_results
             ]
             screened = screen_candidates(repositories, requirement)
+            if self.llm_client is not None and screened:
+                llm_call_count += 1
+                llm_tools.append("llm:screen_candidates")
+                try:
+                    screen_result = await screen_candidates_with_llm(
+                        self.llm_client,
+                        screened,
+                        requirement,
+                    )
+                    screened = screen_result.data
+                    if screen_result.total_tokens is not None:
+                        token_usage = (token_usage or 0) + screen_result.total_tokens
+                except LLMProviderError as error:
+                    errors.append(
+                        {
+                            "node": "refine_session",
+                            "operation": "screen_candidates",
+                            "code": error.code,
+                        }
+                    )
             targets = [item for item in screened if item.research_level != "skip"][
                 : plan.max_research_targets
             ]
@@ -129,7 +182,11 @@ class SearchWorkflow:
                 input_summary=f"追加条件：{feedback[:300]}",
                 output_summary=refinement_summary,
                 duration_ms=int((perf_counter() - started_at) * 1000),
-                tool_names=[] if len(new_reports) == 0 else ["research_repository"],
+                token_usage=token_usage,
+                tool_names=(
+                    llm_tools
+                    + (["research_repository"] if new_reports else [])
+                ),
             )
             return {
                 "session_id": session_id,
@@ -145,8 +202,8 @@ class SearchWorkflow:
                 "final_recommendations": recommendations,
                 "search_round": 0,
                 "tool_call_count": len(new_reports) * 5,
-                "llm_call_count": 0,
-                "errors": [],
+                "llm_call_count": llm_call_count,
+                "errors": errors,
             }
         except Exception as error:
             self.session_store.mark_failed(search_session, error)
@@ -217,6 +274,7 @@ class SearchWorkflow:
         search_session = self._require_session(state["session_id"])
         try:
             updates, output_summary, tools = await operation(state)
+            trace_token_usage = updates.pop("_trace_token_usage", None)
         except Exception as error:
             self.session_store.add_trace(
                 search_session,
@@ -233,6 +291,7 @@ class SearchWorkflow:
             input_summary=input_summary,
             output_summary=output_summary,
             duration_ms=int((perf_counter() - started_at) * 1000),
+            token_usage=trace_token_usage if isinstance(trace_token_usage, int) else None,
             tool_names=tools,
         )
         return updates
@@ -242,11 +301,41 @@ class SearchWorkflow:
 
         async def operation(_: SearchSessionState) -> NodeResult:
             requirement = parse_requirement(state["user_query"])
+            errors = list(state.get("errors", []))
+            updates: dict[str, Any] = {"parsed_requirement": requirement}
+            tools: list[str] = []
+            llm_succeeded = False
+            if self.llm_client is not None:
+                tools.append("llm:parse_requirement")
+                updates["llm_call_count"] = state.get("llm_call_count", 0) + 1
+                try:
+                    llm_result = await parse_requirement_with_llm(
+                        self.llm_client,
+                        state["user_query"],
+                    )
+                    requirement = llm_result.data
+                    updates["parsed_requirement"] = requirement
+                    updates["_trace_token_usage"] = llm_result.total_tokens
+                    llm_succeeded = True
+                except LLMProviderError as error:
+                    errors.append({"node": "parse_requirement", "code": error.code})
+                    updates["errors"] = errors
             capability_count = len(requirement.required_capabilities)
             return (
-                {"parsed_requirement": requirement},
-                f"识别 {len(requirement.topics)} 个主题和 {capability_count} 项能力",
-                [],
+                updates,
+                (
+                    f"识别 {len(requirement.topics)} 个主题和 {capability_count} 项能力"
+                    + (
+                        "，已使用模型增强"
+                        if llm_succeeded
+                        else (
+                            "，模型失败后使用规则"
+                            if self.llm_client is not None
+                            else "，使用确定性规则"
+                        )
+                    )
+                ),
+                tools,
             )
 
         return await self._execute_node(
@@ -350,11 +439,42 @@ class SearchWorkflow:
                 state["filtered_repositories"],
                 state["parsed_requirement"],
             )
+            errors = list(state.get("errors", []))
+            updates: dict[str, Any] = {"screened_repositories": screened}
+            tools: list[str] = []
+            llm_succeeded = False
+            if self.llm_client is not None and screened:
+                tools.append("llm:screen_candidates")
+                updates["llm_call_count"] = state.get("llm_call_count", 0) + 1
+                try:
+                    llm_result = await screen_candidates_with_llm(
+                        self.llm_client,
+                        screened,
+                        state["parsed_requirement"],
+                    )
+                    screened = llm_result.data
+                    updates["screened_repositories"] = screened
+                    updates["_trace_token_usage"] = llm_result.total_tokens
+                    llm_succeeded = True
+                except LLMProviderError as error:
+                    errors.append({"node": "screen_candidates", "code": error.code})
+                    updates["errors"] = errors
             deep_count = sum(item.research_level == "deep" for item in screened)
             return (
-                {"screened_repositories": screened},
-                f"初筛 {len(screened)} 个项目，其中 {deep_count} 个建议深度调查",
-                [],
+                updates,
+                (
+                    f"初筛 {len(screened)} 个项目，其中 {deep_count} 个建议深度调查"
+                    + (
+                        "，已结合模型判断"
+                        if llm_succeeded
+                        else (
+                            "，模型失败后使用规则"
+                            if self.llm_client is not None and screened
+                            else ""
+                        )
+                    )
+                ),
+                tools,
             )
 
         return await self._execute_node(
