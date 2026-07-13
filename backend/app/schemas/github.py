@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class RepositorySummary(BaseModel):
     """屏蔽 GitHub 原始字段差异后的仓库摘要。"""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
     github_id: int
     full_name: str

@@ -7,7 +7,7 @@ AgentRadar 是面向 AI Agent 学习者、求职者和开发者的 GitHub 项目
 项目正在按 V1 计划书分阶段交付：
 
 - [x] 阶段 0：项目骨架与工程规范
-- [ ] 阶段 1：GitHub 数据层
+- [x] 阶段 1：GitHub 数据层
 - [ ] 阶段 2：智能搜索基础链路
 - [ ] 阶段 3：深度研究与推荐
 - [ ] 阶段 4：热门项目雷达
@@ -76,3 +76,13 @@ npm run build
 - V1 只执行 GitHub 只读操作；
 - 不自动运行被研究仓库中的代码或 Shell 命令；
 - 对外部请求统一设置超时、有限重试并记录可解释错误。
+
+## 已开放的 V1 API
+
+- `GET /health`：容器与负载均衡健康检查；
+- `GET /api/v1/repositories/search?q=...`：搜索仓库、标准化数据并保存快照；
+- `GET /api/v1/repositories/{owner}/{repo}`：同步仓库详情；
+- `GET /api/v1/repositories/{owner}/{repo}/readme`：读取并解码 README；
+- `GET /api/v1/repositories/{owner}/{repo}/tree?ref=main&depth=3`：读取裁剪后的目录树。
+
+更多信息见 [API 文档](docs/api.md)。
