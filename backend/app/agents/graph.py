@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.agents.state import SearchSessionState
 from app.models.search import SearchSession
 from app.repositories.analysis_repository import AnalysisReportRepository
+from app.repositories.interaction_repository import InteractionRepository
 from app.repositories.search_session_repository import SearchSessionRepository
 from app.services.filter_service import normalize_and_filter, screen_candidates
 from app.services.requirement_service import build_search_plan, parse_requirement
@@ -231,6 +232,9 @@ class SearchWorkflow:
             plan = state["search_plan"]
             outcome = normalize_and_filter(
                 state["discovered_repositories"],
+                ignored_full_names=InteractionRepository(
+                    self.session_store.session
+                ).ignored_full_names(),
                 updated_after=plan.updated_after,
                 max_candidates=plan.max_candidates,
             )
