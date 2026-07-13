@@ -56,3 +56,29 @@ jobs:
         run: npm run typecheck
       - name: 生产构建
         run: npm run build
+
+  deployment:
+    name: Docker 部署冒烟测试
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      - name: 校验 Compose 配置
+        run: docker compose config --quiet
+      - name: 构建并启动服务
+        run: docker compose up --build -d
+      - name: 等待前后端健康
+        run: |
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/health
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/healthz
+      - name: 加载并验证 Demo 数据
+        run: |
+          docker compose exec -T backend python -m app.demo
+          curl --fail http://localhost:8000/api/v1/trending/daily \
+            | python3 -c 'import json,sys; assert len(json.load(sys.stdin)) == 3'
+      - name: 输出容器日志
+        if: failure()
+        run: docker compose logs
+      - name: 清理测试服务
+        if: always()
+        run: docker compose down -v

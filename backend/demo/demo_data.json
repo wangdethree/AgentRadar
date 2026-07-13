@@ -1,0 +1,119 @@
+{
+  "version": "1.0.0",
+  "repositories": [
+    {
+      "github_id": 990001,
+      "full_name": "agentradar-demo/langgraph-research-agent",
+      "description": "LangGraph + FastAPI 深度研究 Agent，支持工具调用、状态管理和持久化",
+      "language": "Python",
+      "topics": ["langgraph", "fastapi", "research-agent"],
+      "created_days_ago": 220,
+      "snapshots": {
+        "stars_7d": 3600,
+        "stars_24h": 4100,
+        "stars_now": 4200,
+        "forks_7d": 310,
+        "forks_24h": 350,
+        "forks_now": 365,
+        "open_issues": 18
+      },
+      "capabilities": {
+        "tool_calling": true,
+        "state_management": true,
+        "workflow_orchestration": true,
+        "multi_round_execution": true,
+        "memory": true,
+        "human_in_the_loop": true,
+        "persistence": true,
+        "evaluation": true
+      },
+      "engineering": {
+        "has_api": true,
+        "has_tests": true,
+        "has_docker": true,
+        "has_database": true,
+        "has_configuration": true,
+        "has_documentation": true,
+        "dependency_files": ["pyproject.toml"],
+        "file_count": 180
+      },
+      "reading_path": ["app/main.py", "app/graph/state.py", "app/graph/nodes.py"]
+    },
+    {
+      "github_id": 990002,
+      "full_name": "agentradar-demo/memory-service-agent",
+      "description": "面向长期记忆与检索的 Agent 服务，包含 API、测试和数据库层",
+      "language": "Python",
+      "topics": ["agent-memory", "long-term-memory", "fastapi"],
+      "created_days_ago": 180,
+      "snapshots": {
+        "stars_7d": 1300,
+        "stars_24h": 1710,
+        "stars_now": 1800,
+        "forks_7d": 90,
+        "forks_24h": 120,
+        "forks_now": 130,
+        "open_issues": 11
+      },
+      "capabilities": {
+        "tool_calling": true,
+        "state_management": true,
+        "workflow_orchestration": true,
+        "multi_round_execution": true,
+        "memory": true,
+        "human_in_the_loop": false,
+        "persistence": true,
+        "evaluation": true
+      },
+      "engineering": {
+        "has_api": true,
+        "has_tests": true,
+        "has_docker": true,
+        "has_database": true,
+        "has_configuration": true,
+        "has_documentation": true,
+        "dependency_files": ["requirements.txt"],
+        "file_count": 120
+      },
+      "reading_path": ["app/main.py", "app/memory/service.py", "tests/test_memory.py"]
+    },
+    {
+      "github_id": 990003,
+      "full_name": "agentradar-demo/mcp-tool-agent",
+      "description": "通过 MCP 组合外部工具的轻量 Agent 框架，适合二次开发",
+      "language": "TypeScript",
+      "topics": ["mcp", "model-context-protocol", "agent-framework"],
+      "created_days_ago": 90,
+      "snapshots": {
+        "stars_7d": 500,
+        "stars_24h": 900,
+        "stars_now": 980,
+        "forks_7d": 30,
+        "forks_24h": 55,
+        "forks_now": 61,
+        "open_issues": 7
+      },
+      "capabilities": {
+        "tool_calling": true,
+        "state_management": true,
+        "workflow_orchestration": true,
+        "multi_round_execution": true,
+        "memory": false,
+        "human_in_the_loop": false,
+        "persistence": false,
+        "evaluation": true
+      },
+      "engineering": {
+        "has_api": true,
+        "has_tests": true,
+        "has_docker": true,
+        "has_database": false,
+        "has_configuration": true,
+        "has_documentation": true,
+        "dependency_files": ["package.json"],
+        "file_count": 85
+      },
+      "reading_path": ["src/index.ts", "src/agent/graph.ts", "src/tools/mcp.ts"]
+    }
+  ]
+}

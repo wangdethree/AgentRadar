@@ -52,9 +52,10 @@ npm run dev
 ```bash
 cp .env.example .env
 docker compose up --build
+docker compose exec backend python -m app.demo
 ```
 
-容器启动后，统一入口为 <http://localhost:8080>，后端 API 仍可通过 <http://localhost:8000> 直接访问。
+Compose 默认启动 PostgreSQL 16、Python 3.11 后端和前端 Nginx。容器启动后，统一入口为 <http://localhost:8080>，后端 API 仍可通过 <http://localhost:8000> 直接访问。首次启动前请修改 `.env` 的 PostgreSQL 密码和对应连接串，完整步骤见 [部署文档](docs/deployment.md)。
 
 ## 质量检查
 
@@ -110,3 +111,11 @@ npm run build
 仓库内置 5 条固定需求和 2 个可离线重放的仓库研究样本。评测覆盖条件提取、查询有效性、排除词泄漏、Agent 能力识别、套壳风险、错误项目过滤、推荐首位相关度、证据覆盖和文件路径幻觉，并在每次 CI 中运行。
 
 当前 `1.0.0` 基线的条件字段准确率、查询有效率、能力识别准确率、过滤召回率、首位推荐准确率和证据覆盖率均为 100%，排除词泄漏率与文件路径幻觉率均为 0%。详细口径、运行方式和限制见 [Agent 评测报告](docs/evaluation.md)。
+
+## 项目文档
+
+- [架构说明](docs/architecture.md)：系统边界、搜索状态流、数据模型与可靠性设计；
+- [API 文档](docs/api.md)：接口、请求示例和错误格式；
+- [部署说明](docs/deployment.md)：Docker Compose、迁移、Demo 数据和运维；
+- [5 分钟演示脚本](docs/demo.md)：搜索、热门雷达、评测与录制检查；
+- [面试问答](docs/interview.md)：核心设计取舍、失败处理、成本和项目边界。
