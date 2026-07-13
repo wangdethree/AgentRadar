@@ -40,3 +40,22 @@ GitHub 请求失败时统一返回：
 ```
 
 响应不会包含 GitHub Token、请求头或内部堆栈。
+
+## 智能搜索会话
+
+```http
+POST /api/v1/search/sessions
+Content-Type: application/json
+
+{
+  "query": "寻找 Python LangGraph FastAPI 项目，包含工具调用和状态管理"
+}
+```
+
+基础工作流会依次完成需求解析、搜索计划、GitHub 搜索、去重过滤、候选初筛、研究目标选择和持久化。相关查询接口：
+
+```http
+GET /api/v1/search/sessions/{session_id}
+GET /api/v1/search/sessions/{session_id}/results
+GET /api/v1/search/sessions/{session_id}/traces
+```
