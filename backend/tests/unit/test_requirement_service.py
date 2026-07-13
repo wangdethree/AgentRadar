@@ -14,11 +14,21 @@ def test_parse_requirement_extracts_chinese_constraints() -> None:
 
     assert requirement.topics == ["LangGraph"]
     assert requirement.languages == ["Python"]
-    assert requirement.preferred_technologies == ["FastAPI", "LangGraph", "CrewAI"]
+    assert requirement.preferred_technologies == ["FastAPI", "LangGraph"]
     assert requirement.required_capabilities == ["tool calling", "state management"]
     assert requirement.excluded_features == ["CrewAI"]
     assert requirement.difficulty == "intermediate"
     assert requirement.goal == "resume_project"
+
+
+def test_parse_requirement_does_not_search_excluded_technology() -> None:
+    """明确排除的技术不能同时进入偏好条件和搜索语句。"""
+    requirement = parse_requirement("找 Python 多 Agent 简历项目，不要 CrewAI")
+    plan = build_search_plan(requirement, now=datetime(2026, 7, 13, tzinfo=UTC))
+
+    assert requirement.excluded_features == ["CrewAI"]
+    assert "CrewAI" not in requirement.preferred_technologies
+    assert all("CrewAI" not in item.query for item in plan.queries)
 
 
 def test_build_search_plan_produces_complementary_queries() -> None:
@@ -31,4 +41,3 @@ def test_build_search_plan_produces_complementary_queries() -> None:
     assert all("language:Python" in item.query for item in plan.queries)
     assert plan.queries[0].purpose
     assert plan.max_research_targets == 5
-

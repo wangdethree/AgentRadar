@@ -90,14 +90,20 @@ def parse_requirement(user_query: str) -> ParsedRequirement:
         goal = "learn"
 
     topics = _detect_terms(query, TERM_GROUPS)
+    excluded_features = _detect_exclusions(query)
+    preferred_technologies = [
+        technology
+        for technology in _detect_terms(query, TECHNOLOGY_GROUPS)
+        if technology not in excluded_features
+    ]
     return ParsedRequirement(
         topics=topics or ["AI Agent"],
         languages=_detect_terms(query, LANGUAGE_GROUPS),
-        preferred_technologies=_detect_terms(query, TECHNOLOGY_GROUPS),
+        preferred_technologies=preferred_technologies,
         required_capabilities=_detect_terms(query, CAPABILITY_GROUPS),
         difficulty=difficulty,
         goal=goal,
-        excluded_features=_detect_exclusions(query),
+        excluded_features=excluded_features,
     )
 
 
@@ -153,4 +159,3 @@ def build_search_plan(requirement: ParsedRequirement, *, now: datetime | None = 
         unique_queries.append(SearchQuery(query=normalized_query, purpose=purpose))
 
     return SearchPlan(queries=unique_queries[:5], updated_after=updated_after)
-
