@@ -1,5 +1,7 @@
 """智能搜索基础工作流集成测试。"""
 
+import base64
+
 import httpx
 import pytest
 from sqlalchemy import create_engine, func, select
@@ -35,10 +37,10 @@ def repository_payload() -> dict[str, object]:
     }
 
 
-@pytest.mark.anyio
-async def test_search_workflow_runs_full_foundation_chain() -> None:
-    """自然语言输入应经过搜索、去重、初筛并留下完整轨迹。"""
-    def handler(_: httpx.Request) -> httpx.Response:
+def github_handler(request: httpx.Request) -> httpx.Response:
+    """为搜索与深度研究端点提供稳定模拟响应。"""
+    path = request.url.path
+    if path == "/search/repositories":
         return httpx.Response(
             200,
             json={
@@ -47,7 +49,62 @@ async def test_search_workflow_runs_full_foundation_chain() -> None:
                 "items": [repository_payload()],
             },
         )
+    if path.endswith("/readme"):
+        content = (
+            "# LangGraph FastAPI Agent\nA research agent with StateGraph, bind_tools, "
+            "memory, checkpointer and evaluation."
+        )
+        return httpx.Response(
+            200,
+            json={
+                "type": "file",
+                "path": "README.md",
+                "sha": "readme-sha",
+                "size": len(content.encode()),
+                "content": base64.b64encode(content.encode()).decode(),
+            },
+        )
+    if "/git/trees/" in path:
+        tree_paths = [
+            "app/main.py",
+            "app/graph/state.py",
+            "app/graph/nodes.py",
+            "app/tools/search.py",
+            "app/api/routes.py",
+            "tests/test_graph.py",
+            "Dockerfile",
+            "pyproject.toml",
+        ]
+        return httpx.Response(
+            200,
+            json={
+                "tree": [
+                    {"path": item, "type": "blob", "sha": f"sha-{index}", "size": 100}
+                    for index, item in enumerate(tree_paths)
+                ],
+                "truncated": False,
+            },
+        )
+    if "/contents/" in path:
+        content = "dependencies = ['fastapi', 'sqlalchemy', 'langgraph']"
+        return httpx.Response(
+            200,
+            json={
+                "type": "file",
+                "path": "pyproject.toml",
+                "sha": "dependency-sha",
+                "size": len(content.encode()),
+                "content": base64.b64encode(content.encode()).decode(),
+            },
+        )
+    if path.endswith(("/releases", "/issues")):
+        return httpx.Response(200, json=[])
+    return httpx.Response(404, json={"message": "Not Found"})
 
+
+@pytest.mark.anyio
+async def test_search_workflow_runs_full_foundation_chain() -> None:
+    """自然语言输入应经过搜索、去重、初筛并留下完整轨迹。"""
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -61,7 +118,7 @@ async def test_search_workflow_runs_full_foundation_chain() -> None:
     )
 
     with Session(engine) as session:
-        async with GitHubClient(settings, transport=httpx.MockTransport(handler)) as client:
+        async with GitHubClient(settings, transport=httpx.MockTransport(github_handler)) as client:
             state = await SearchWorkflow(session, client).run(
                 "寻找 Python LangGraph FastAPI 项目，包含工具调用和状态管理，适合简历",
                 prefer_langgraph=False,
@@ -74,6 +131,7 @@ async def test_search_workflow_runs_full_foundation_chain() -> None:
         assert len(state["filtered_repositories"]) == 1
         assert len(state["research_targets"]) == 1
         assert state["research_targets"][0].research_level == "deep"
-        assert session.scalar(select(func.count()).select_from(ExecutionTrace)) == 7
-        assert session.scalar(select(func.count()).select_from(SearchResult)) == 2
-
+        assert len(state["final_recommendations"]) == 1
+        assert state["final_recommendations"][0].report.reading_path
+        assert session.scalar(select(func.count()).select_from(ExecutionTrace)) == 10
+        assert session.scalar(select(func.count()).select_from(SearchResult)) == 3

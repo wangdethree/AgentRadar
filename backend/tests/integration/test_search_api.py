@@ -14,21 +14,11 @@ from app.core.database import get_db
 from app.main import app
 from app.models import Base
 from app.tools.github.client import GitHubClient
-from tests.integration.test_search_workflow import repository_payload
+from tests.integration.test_search_workflow import github_handler
 
 
 def test_create_search_session_and_read_traces() -> None:
     """API 应完成搜索并允许随后读取会话和七个节点轨迹。"""
-    def handler(_: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200,
-            json={
-                "total_count": 1,
-                "incomplete_results": False,
-                "items": [repository_payload()],
-            },
-        )
-
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -38,7 +28,7 @@ def test_create_search_session_and_read_traces() -> None:
     session = Session(engine)
     github_client = GitHubClient(
         Settings(_env_file=None, github_api_url="https://api.github.test", github_max_retries=0),
-        transport=httpx.MockTransport(handler),
+        transport=httpx.MockTransport(github_handler),
     )
 
     def override_database() -> Iterator[Session]:
@@ -71,10 +61,11 @@ def test_create_search_session_and_read_traces() -> None:
         assert response.json()["filtered_count"] == 1
         assert len(response.json()["research_targets"]) == 1
         assert traces_response.status_code == 200
-        assert len(traces_response.json()) == 7
+        assert len(response.json()["final_recommendations"]) == 1
+        assert response.json()["final_recommendations"][0]["report"]["reading_path"]
+        assert len(traces_response.json()) == 10
         assert results_response.status_code == 200
         assert results_response.json()[0]["repository"]["full_name"].startswith("example/")
     finally:
         app.dependency_overrides.clear()
         session.close()
-

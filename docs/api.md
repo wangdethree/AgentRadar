@@ -59,3 +59,14 @@ GET /api/v1/search/sessions/{session_id}
 GET /api/v1/search/sessions/{session_id}/results
 GET /api/v1/search/sessions/{session_id}/traces
 ```
+
+工作流随后会对最多五个目标读取 README、目录、依赖文件、Release 和 Issue，输出最多三个最终推荐。每个推荐包含六维评分、能力证据、工程分析、优缺点、套壳风险和来自真实目录的阅读路径。
+
+## 单仓库分析
+
+```http
+POST /api/v1/repositories/{owner}/{repo}/analyze?report_type=deep
+GET  /api/v1/repositories/{owner}/{repo}/analysis?report_type=deep
+```
+
+`analyze` 会消耗 GitHub API 配额并保存报告；`analysis` 只读取本地最新报告。

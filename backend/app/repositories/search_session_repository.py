@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.search import ExecutionTrace, SearchResult, SearchSession
 from app.repositories.repository_repository import RepositoryRepository
+from app.schemas.analysis import RecommendationCard
 from app.schemas.search import ParsedRequirement, ScreenedRepository, SearchPlan
 
 
@@ -114,6 +115,34 @@ class SearchSessionRepository:
             )
         self.session.commit()
 
+    def replace_final_results(
+        self,
+        search_session: SearchSession,
+        recommendations: list[RecommendationCard],
+    ) -> None:
+        """保存最终三项推荐及其总分。"""
+        self.session.execute(
+            delete(SearchResult).where(
+                SearchResult.session_id == search_session.id,
+                SearchResult.stage == "final",
+            )
+        )
+        repository_store = RepositoryRepository(self.session)
+        for rank, card in enumerate(recommendations, start=1):
+            repository = repository_store.upsert(card.repository)
+            self.session.add(
+                SearchResult(
+                    session_id=search_session.id,
+                    repository_id=repository.id,
+                    stage="final",
+                    relevance_score=card.score.relevance,
+                    final_score=card.total_score,
+                    rank=rank,
+                    reason=card.match_points,
+                )
+            )
+        self.session.commit()
+
     def list_results(self, session_id: str, stage: str | None = None) -> list[SearchResult]:
         """按阶段和排名读取搜索结果。"""
         statement = (
@@ -134,4 +163,3 @@ class SearchSessionRepository:
             .order_by(ExecutionTrace.created_at, ExecutionTrace.id)
         )
         return list(self.session.scalars(statement))
-

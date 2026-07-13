@@ -2,13 +2,17 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_github_client
 from app.core.database import get_db
+from app.repositories.analysis_repository import AnalysisReportRepository
+from app.repositories.repository_repository import RepositoryRepository
+from app.schemas.analysis import ResearchReportData
 from app.schemas.github import RepositorySearchPage, RepositorySummary
 from app.services.repository_service import RepositoryService
+from app.services.research_service import ResearchService
 from app.tools.github.client import GitHubClient
 from app.tools.github.content import GitHubFileContent
 from app.tools.github.readme import get_readme
@@ -67,3 +71,46 @@ async def read_repository_tree(
     """按指定深度读取仓库目录树。"""
     return await get_repository_tree(github_client, owner, repo, ref, depth=depth)
 
+
+@router.post(
+    "/{owner}/{repo}/analyze",
+    response_model=ResearchReportData,
+    summary="分析单个仓库",
+)
+async def analyze_repository(
+    owner: str,
+    repo: str,
+    db: DatabaseSession,
+    github_client: GitHubClientDependency,
+    report_type: Annotated[str, Query(pattern="^(shallow|deep)$")] = "deep",
+) -> ResearchReportData:
+    """同步仓库后执行浅层或深层证据化调查。"""
+    repository = await RepositoryService(db, github_client).sync_repository(owner, repo)
+    report = await ResearchService(github_client).research(
+        repository,
+        report_type=report_type,
+    )
+    AnalysisReportRepository(db).save(report)
+    return report
+
+
+@router.get(
+    "/{owner}/{repo}/analysis",
+    response_model=ResearchReportData,
+    summary="读取最新分析报告",
+)
+async def get_repository_analysis(
+    owner: str,
+    repo: str,
+    db: DatabaseSession,
+    report_type: Annotated[str, Query(pattern="^(shallow|deep)$")] = "deep",
+) -> ResearchReportData:
+    """读取本地最新报告，不重复消耗 GitHub 配额。"""
+    repository = RepositoryRepository(db).get_by_full_name(f"{owner}/{repo}")
+    if repository is None:
+        raise HTTPException(status_code=404, detail="仓库尚未同步")
+    store = AnalysisReportRepository(db)
+    record = store.get_latest(repository.id, report_type)
+    if record is None:
+        raise HTTPException(status_code=404, detail="分析报告不存在")
+    return store.to_schema(record)

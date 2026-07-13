@@ -8,9 +8,12 @@ from sqlalchemy.orm import Session
 
 from app.agents.state import SearchSessionState
 from app.models.search import SearchSession
+from app.repositories.analysis_repository import AnalysisReportRepository
 from app.repositories.search_session_repository import SearchSessionRepository
 from app.services.filter_service import normalize_and_filter, screen_candidates
 from app.services.requirement_service import build_search_plan, parse_requirement
+from app.services.research_service import ResearchService
+from app.services.scoring_service import build_recommendations
 from app.tools.github.client import GitHubClient
 from app.tools.github.errors import GitHubAPIError
 from app.tools.github.search import search_repositories
@@ -70,6 +73,9 @@ class SearchWorkflow:
         builder.add_node("normalize_and_filter", self.normalize_and_filter_node)
         builder.add_node("screen_candidates", self.screen_candidates_node)
         builder.add_node("select_research_targets", self.select_research_targets_node)
+        builder.add_node("research_repository", self.research_repository_node)
+        builder.add_node("score_and_rank", self.score_and_rank_node)
+        builder.add_node("generate_recommendations", self.generate_recommendations_node)
         builder.add_node("persist_session", self.persist_session_node)
         builder.add_edge(START, "parse_requirement")
         builder.add_edge("parse_requirement", "build_search_plan")
@@ -77,7 +83,10 @@ class SearchWorkflow:
         builder.add_edge("search_github", "normalize_and_filter")
         builder.add_edge("normalize_and_filter", "screen_candidates")
         builder.add_edge("screen_candidates", "select_research_targets")
-        builder.add_edge("select_research_targets", "persist_session")
+        builder.add_edge("select_research_targets", "research_repository")
+        builder.add_edge("research_repository", "score_and_rank")
+        builder.add_edge("score_and_rank", "generate_recommendations")
+        builder.add_edge("generate_recommendations", "persist_session")
         builder.add_edge("persist_session", END)
         return builder.compile()
 
@@ -94,6 +103,9 @@ class SearchWorkflow:
             self.normalize_and_filter_node,
             self.screen_candidates_node,
             self.select_research_targets_node,
+            self.research_repository_node,
+            self.score_and_rank_node,
+            self.generate_recommendations_node,
             self.persist_session_node,
         )
         for node in node_sequence:
@@ -136,6 +148,7 @@ class SearchWorkflow:
 
     async def parse_requirement_node(self, state: SearchSessionState) -> dict[str, Any]:
         """结构化用户需求。"""
+
         async def operation(_: SearchSessionState) -> NodeResult:
             requirement = parse_requirement(state["user_query"])
             capability_count = len(requirement.required_capabilities)
@@ -154,6 +167,7 @@ class SearchWorkflow:
 
     async def build_search_plan_node(self, state: SearchSessionState) -> dict[str, Any]:
         """生成互补 GitHub 搜索语句。"""
+
         async def operation(_: SearchSessionState) -> NodeResult:
             plan = build_search_plan(state["parsed_requirement"])
             return ({"search_plan": plan}, f"生成 {len(plan.queries)} 条搜索语句", [])
@@ -167,6 +181,7 @@ class SearchWorkflow:
 
     async def search_github_node(self, state: SearchSessionState) -> dict[str, Any]:
         """按计划执行多组 GitHub 搜索，单条失败不终止整轮。"""
+
         async def operation(_: SearchSessionState) -> NodeResult:
             plan = state["search_plan"]
             discovered = []
@@ -211,6 +226,7 @@ class SearchWorkflow:
 
     async def normalize_and_filter_node(self, state: SearchSessionState) -> dict[str, Any]:
         """执行去重和硬规则过滤。"""
+
         async def operation(_: SearchSessionState) -> NodeResult:
             plan = state["search_plan"]
             outcome = normalize_and_filter(
@@ -234,6 +250,7 @@ class SearchWorkflow:
 
     async def screen_candidates_node(self, state: SearchSessionState) -> dict[str, Any]:
         """根据需求相关度进行低成本初筛。"""
+
         async def operation(_: SearchSessionState) -> NodeResult:
             screened = screen_candidates(
                 state["filtered_repositories"],
@@ -255,6 +272,7 @@ class SearchWorkflow:
 
     async def select_research_targets_node(self, state: SearchSessionState) -> dict[str, Any]:
         """从非 skip 项目中选择最多五个研究目标。"""
+
         async def operation(_: SearchSessionState) -> NodeResult:
             limit = state["search_plan"].max_research_targets
             targets = [
@@ -275,6 +293,7 @@ class SearchWorkflow:
 
     async def persist_session_node(self, state: SearchSessionState) -> dict[str, Any]:
         """保存计划、初筛结果、研究目标和完成状态。"""
+
         async def operation(_: SearchSessionState) -> NodeResult:
             search_session = self._require_session(state["session_id"])
             self.session_store.save_plan(
@@ -292,6 +311,13 @@ class SearchWorkflow:
                 stage="research_target",
                 items=state["research_targets"],
             )
+            report_store = AnalysisReportRepository(self.session_store.session)
+            for report in state["research_reports"]:
+                report_store.save(report)
+            self.session_store.replace_final_results(
+                search_session,
+                state["final_recommendations"],
+            )
             self.session_store.mark_completed(search_session)
             return ({}, "搜索会话、结果和轨迹已保存", [])
 
@@ -300,6 +326,92 @@ class SearchWorkflow:
             state,
             operation,
             "持久化结构化搜索结果",
+        )
+
+    async def research_repository_node(self, state: SearchSessionState) -> dict[str, Any]:
+        """按初筛等级调查仓库，单个项目失败时继续其余项目。"""
+
+        async def operation(_: SearchSessionState) -> NodeResult:
+            service = ResearchService(self.github_client)
+            reports = []
+            errors = list(state.get("errors", []))
+            for target in state["research_targets"]:
+                try:
+                    reports.append(
+                        await service.research(
+                            target.repository,
+                            report_type="deep" if target.research_level == "deep" else "shallow",
+                        )
+                    )
+                except Exception as error:  # 单仓库失败不能终止整轮搜索
+                    errors.append(
+                        {
+                            "repository": target.repository.full_name,
+                            "code": type(error).__name__,
+                        }
+                    )
+            return (
+                {
+                    "research_reports": reports,
+                    "tool_call_count": state.get("tool_call_count", 0)
+                    + len(state["research_targets"]) * 5,
+                    "errors": errors,
+                },
+                f"完成 {len(reports)} 个项目调查，累计 {len(errors)} 个非致命错误",
+                [
+                    "get_readme",
+                    "get_repository_tree",
+                    "get_file_content",
+                    "get_releases",
+                    "get_issues",
+                ],
+            )
+
+        return await self._execute_node(
+            "research_repository",
+            state,
+            operation,
+            f"调查 {len(state['research_targets'])} 个候选项目",
+        )
+
+    async def score_and_rank_node(self, state: SearchSessionState) -> dict[str, Any]:
+        """计算六维评分并按总分排序。"""
+
+        async def operation(_: SearchSessionState) -> NodeResult:
+            recommendations = build_recommendations(
+                state["research_targets"],
+                state["research_reports"],
+                state["parsed_requirement"],
+            )
+            return (
+                {"scored_recommendations": recommendations},
+                f"完成 {len(recommendations)} 个项目的六维评分",
+                [],
+            )
+
+        return await self._execute_node(
+            "score_and_rank",
+            state,
+            operation,
+            "结合相关度、技术栈、Agent 能力、工程质量、活跃度与难度评分",
+        )
+
+    async def generate_recommendations_node(self, state: SearchSessionState) -> dict[str, Any]:
+        """生成最多三个最终推荐卡。"""
+
+        async def operation(_: SearchSessionState) -> NodeResult:
+            recommendations = state["scored_recommendations"][:3]
+            return (
+                {"final_recommendations": recommendations},
+                f"生成 {len(recommendations)} 个最终推荐",
+                [],
+            )
+
+        return await self._execute_node(
+            "generate_recommendations",
+            state,
+            operation,
+            "生成包含证据、风险和阅读路径的推荐卡",
         )
 
     def _require_session(self, session_id: str) -> SearchSession:

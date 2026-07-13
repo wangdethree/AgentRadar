@@ -46,6 +46,7 @@ async def create_search_session(
         filtered_count=len(state["filtered_repositories"]),
         screened_count=len(state["screened_repositories"]),
         research_targets=state["research_targets"],
+        final_recommendations=state["final_recommendations"],
     )
 
 

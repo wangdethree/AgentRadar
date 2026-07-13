@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.analysis import RecommendationCard
 from app.schemas.github import RepositorySummary
 
 Difficulty = Literal["beginner", "intermediate", "advanced", "any"]
@@ -119,3 +120,4 @@ class SearchExecutionResponse(BaseModel):
     filtered_count: int
     screened_count: int
     research_targets: list[ScreenedRepository] = Field(default_factory=list)
+    final_recommendations: list[RecommendationCard] = Field(default_factory=list)

@@ -5,7 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.models.analysis import AnalysisReport
 from app.repositories.repository_repository import RepositoryRepository
-from app.schemas.analysis import ResearchReportData
+from app.schemas.analysis import (
+    AgentCapabilities,
+    EngineeringAnalysis,
+    EvidenceItem,
+    ReadingPathItem,
+    ResearchReportData,
+)
+from app.schemas.github import RepositorySummary
 
 
 class AnalysisReportRepository:
@@ -47,3 +54,19 @@ class AnalysisReportRepository:
             .limit(1)
         )
         return self.session.scalar(statement)
+
+    @staticmethod
+    def to_schema(record: AnalysisReport) -> ResearchReportData:
+        """把持久化报告恢复为 API 数据结构。"""
+        return ResearchReportData(
+            repository=RepositorySummary.model_validate(record.repository),
+            report_type="deep" if record.report_type == "deep" else "shallow",
+            project_summary=record.project_summary,
+            agent_capabilities=AgentCapabilities.model_validate(record.agent_capabilities),
+            engineering_analysis=EngineeringAnalysis.model_validate(record.engineering_analysis),
+            strengths=record.strengths,
+            weaknesses=record.weaknesses,
+            evidence=[EvidenceItem.model_validate(item) for item in record.evidence],
+            reading_path=[ReadingPathItem.model_validate(item) for item in record.reading_path],
+            wrapper_risk=record.wrapper_risk,  # type: ignore[arg-type]
+        )

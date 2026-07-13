@@ -2,6 +2,7 @@
 
 from typing import TypedDict
 
+from app.schemas.analysis import RecommendationCard, ResearchReportData
 from app.schemas.github import RepositorySummary
 from app.schemas.search import ParsedRequirement, ScreenedRepository, SearchPlan
 
@@ -17,8 +18,10 @@ class SearchSessionState(TypedDict, total=False):
     filtered_repositories: list[RepositorySummary]
     screened_repositories: list[ScreenedRepository]
     research_targets: list[ScreenedRepository]
+    research_reports: list[ResearchReportData]
+    scored_recommendations: list[RecommendationCard]
+    final_recommendations: list[RecommendationCard]
     search_round: int
     tool_call_count: int
     llm_call_count: int
     errors: list[dict[str, object]]
-
