@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: str = "http://localhost:5173"
+    database_url: str = "sqlite:///./agentradar.db"
+    github_token: str | None = None
+    github_api_url: str = "https://api.github.com"
+    github_timeout_seconds: float = 15.0
+    github_max_retries: int = 2
+    github_cache_ttl_seconds: int = 300
 
     @computed_field
     @property
@@ -32,4 +38,3 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """缓存配置实例，避免每次请求重复解析环境变量。"""
     return Settings()
-

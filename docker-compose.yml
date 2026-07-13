@@ -9,8 +9,12 @@ services:
       DEBUG: ${DEBUG:-false}
       API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
-      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:///./agentradar.db}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./agentradar.db}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_API_URL: ${GITHUB_API_URL:-https://api.github.com}
+      GITHUB_TIMEOUT_SECONDS: ${GITHUB_TIMEOUT_SECONDS:-15}
+      GITHUB_MAX_RETRIES: ${GITHUB_MAX_RETRIES:-2}
+      GITHUB_CACHE_TTL_SECONDS: ${GITHUB_CACHE_TTL_SECONDS:-300}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}
@@ -40,4 +44,3 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
-
