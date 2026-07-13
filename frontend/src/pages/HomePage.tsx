@@ -1,29 +1,78 @@
 import { FormEvent, useState } from 'react'
 
+import { addFavorite, ignoreRepository } from '../api/interactions'
+import { createSearchSession, getSearchTraces } from '../api/search'
+import { FavoritesPanel } from '../components/FavoritesPanel'
+import { RecommendationCard } from '../components/RecommendationCard'
+import { TraceTimeline } from '../components/TraceTimeline'
+import { TrendingRadar } from '../components/TrendingRadar'
 import { useHealth } from '../hooks/useHealth'
+import type { ExecutionTrace, SearchExecutionResponse } from '../types/api'
 
 const topics = ['LangGraph', 'MCP', 'Agent Memory', 'Multi-Agent', 'Agent Evaluation']
 
 export function HomePage() {
   const [query, setQuery] = useState('')
+  const [searchResult, setSearchResult] = useState<SearchExecutionResponse | null>(null)
+  const [traces, setTraces] = useState<ExecutionTrace[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [favoritesRefreshKey, setFavoritesRefreshKey] = useState(0)
   const health = useHealth()
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // 阶段 2 接入搜索会话 API；当前先保留完整输入交互。
+    if (!query.trim()) return
+    setIsSearching(true)
+    setError(null)
+    setNotice(null)
+    setSearchResult(null)
+    setTraces([])
+    try {
+      const result = await createSearchSession(query.trim())
+      setSearchResult(result)
+      setTraces(await getSearchTraces(result.session.id))
+      window.setTimeout(() => document.querySelector('#results')?.scrollIntoView(), 80)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '搜索执行失败')
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  async function handleFavorite(fullName: string) {
+    await addFavorite(fullName, searchResult?.session.id)
+    setFavoritesRefreshKey((value) => value + 1)
+    setNotice(`已收藏 ${fullName}`)
+  }
+
+  async function handleIgnore(fullName: string) {
+    await ignoreRepository(fullName)
+    setSearchResult((current) =>
+      current
+        ? {
+            ...current,
+            final_recommendations: current.final_recommendations.filter(
+              (item) => item.repository.full_name !== fullName,
+            ),
+          }
+        : null,
+    )
+    setNotice(`已忽略 ${fullName}，后续搜索会自动过滤`)
   }
 
   return (
     <main>
       <nav className="nav shell" aria-label="主导航">
-        <a className="brand" href="/" aria-label="AgentRadar 首页">
+        <a className="brand" href="#discover" aria-label="AgentRadar 首页">
           <span className="brand-mark">AR</span>
           <span>AgentRadar</span>
         </a>
         <div className="nav-links" aria-label="功能导航">
           <a href="#discover">智能搜索</a>
           <a href="#trending">热门雷达</a>
-          <a href="#about">工作方式</a>
+          <a href="#favorites">收藏项目</a>
         </div>
         <span className={`health ${health.isSuccess ? 'is-online' : ''}`}>
           <span className="health-dot" />
@@ -42,7 +91,7 @@ export function HomePage() {
           描述你的技术栈和学习目标，AgentRadar 会制定搜索计划、调查真实代码并给出有证据的推荐。
         </p>
 
-        <form className="search-panel" onSubmit={handleSubmit}>
+        <form className="search-panel" onSubmit={(event) => void handleSubmit(event)}>
           <label htmlFor="project-query">你想寻找什么样的项目？</label>
           <textarea
             id="project-query"
@@ -50,13 +99,19 @@ export function HomePage() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="例如：适合 Python 后端开发者学习的 LangGraph 项目，包含 FastAPI、工具调用和状态管理……"
             rows={3}
+            disabled={isSearching}
           />
           <div className="search-actions">
             <span>支持自然语言描述技术栈、难度与目标</span>
-            <button type="submit" disabled={!query.trim()}>
-              开始调查 <span aria-hidden="true">↗</span>
+            <button type="submit" disabled={!query.trim() || isSearching}>
+              {isSearching ? 'Agent 正在调查…' : '开始调查 ↗'}
             </button>
           </div>
+          {isSearching && (
+            <div className="search-progress" role="status">
+              <span /> 正在搜索 GitHub、过滤候选并读取真实仓库证据，这通常需要几十秒。
+            </div>
+          )}
         </form>
 
         <div className="topic-row" aria-label="推荐主题">
@@ -67,25 +122,67 @@ export function HomePage() {
             </button>
           ))}
         </div>
+        {error && <p className="error-banner">{error}</p>}
+        {notice && <p className="notice-banner">{notice}</p>}
       </section>
 
-      <section className="process shell" id="about">
-        <article>
-          <span className="step">01</span>
-          <h2>理解需求</h2>
-          <p>把自然语言整理成技术栈、能力、难度和排除条件。</p>
-        </article>
-        <article>
-          <span className="step">02</span>
-          <h2>调查代码</h2>
-          <p>读取真实 README、目录、依赖与核心文件，不只看 Star。</p>
-        </article>
-        <article>
-          <span className="step">03</span>
-          <h2>解释推荐</h2>
-          <p>给出评分、证据、风险、改造空间与建议阅读顺序。</p>
-        </article>
-      </section>
+      {!searchResult && (
+        <section className="process shell" id="about">
+          <article>
+            <span className="step">01</span>
+            <h2>理解需求</h2>
+            <p>把自然语言整理成技术栈、能力、难度和排除条件。</p>
+          </article>
+          <article>
+            <span className="step">02</span>
+            <h2>调查代码</h2>
+            <p>读取真实 README、目录、依赖与核心文件，不只看 Star。</p>
+          </article>
+          <article>
+            <span className="step">03</span>
+            <h2>解释推荐</h2>
+            <p>给出评分、证据、风险、改造空间与建议阅读顺序。</p>
+          </article>
+        </section>
+      )}
+
+      {searchResult && (
+        <section className="results shell" id="results">
+          <div className="section-heading">
+            <span>Research complete</span>
+            <h2>最终推荐</h2>
+            <p>
+              从 {searchResult.discovered_count} 条发现中，过滤到 {searchResult.filtered_count} 个候选，
+              最终推荐 {searchResult.final_recommendations.length} 个项目。
+            </p>
+          </div>
+          {searchResult.final_recommendations.length === 0 && (
+            <p className="empty-state">当前条件下没有足够证据的项目，请放宽限制后重试。</p>
+          )}
+          <div className="recommendation-list">
+            {searchResult.final_recommendations.map((card, index) => (
+              <RecommendationCard
+                key={card.repository.full_name}
+                card={card}
+                rank={index + 1}
+                onFavorite={handleFavorite}
+                onIgnore={handleIgnore}
+              />
+            ))}
+          </div>
+          {traces.length > 0 && <TraceTimeline traces={traces} />}
+        </section>
+      )}
+
+      <div className="shell lower-dashboard">
+        <TrendingRadar />
+        <FavoritesPanel refreshKey={favoritesRefreshKey} />
+      </div>
+
+      <footer className="site-footer shell">
+        <span>AgentRadar V1</span>
+        <p>每个结论都应能回到真实仓库证据。</p>
+      </footer>
     </main>
   )
 }
