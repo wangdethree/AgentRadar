@@ -44,13 +44,12 @@ class Repository(TimestampMixin, Base):
         order_by="RepositorySnapshot.captured_at",
     )
 
+
 class RepositorySnapshot(Base):
     """保存某个时间点的仓库指标，为趋势计算提供原始数据。"""
 
     __tablename__ = "repository_snapshots"
-    __table_args__ = (
-        Index("ix_repository_snapshots_repo_time", "repository_id", "captured_at"),
-    )
+    __table_args__ = (Index("ix_repository_snapshots_repo_time", "repository_id", "captured_at"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     repository_id: Mapped[int] = mapped_column(
