@@ -60,6 +60,8 @@ GET /api/v1/search/sessions/{session_id}/results
 GET /api/v1/search/sessions/{session_id}/traces
 ```
 
+搜索历史使用 `GET /api/v1/search/sessions?limit=10&status=completed`，按创建时间倒序返回会话摘要。`limit` 范围为 1～50，`status` 可选；列表不会重复返回体积较大的阶段结果和研究报告。
+
 工作流随后会对最多五个目标读取 README、目录、依赖文件、Release 和 Issue，输出最多三个最终推荐。每个推荐包含六维评分、能力证据、工程分析、优缺点、套壳风险和来自真实目录的阅读路径。
 
 `traces` 响应会为模型节点记录 `tool_names` 和可用的 `token_usage`。模型失败以非致命错误码进入会话 `errors`，不会暴露 API Key、完整提示词或外部服务的原始响应。

@@ -56,6 +56,10 @@ def test_create_search_session_and_read_traces() -> None:
                 f"/api/v1/search/sessions/{session_id}/results",
                 params={"stage": "research_target"},
             )
+            history_response = client.get(
+                "/api/v1/search/sessions",
+                params={"limit": 5, "status": "completed"},
+            )
 
         assert response.status_code == 201
         assert response.json()["filtered_count"] == 1
@@ -68,6 +72,8 @@ def test_create_search_session_and_read_traces() -> None:
         assert len(traces_response.json()) == 10
         assert results_response.status_code == 200
         assert results_response.json()[0]["repository"]["full_name"].startswith("example/")
+        assert history_response.status_code == 200
+        assert [item["id"] for item in history_response.json()] == [session_id]
     finally:
         app.dependency_overrides.clear()
         session.close()

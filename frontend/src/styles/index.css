@@ -545,7 +545,8 @@ h1 span {
 }
 
 .recommendation-card footer button,
-.favorite-list button {
+.favorite-list button,
+.history-list button {
   cursor: pointer;
   padding: 9px 13px;
   border: 1px solid rgba(81, 230, 162, 0.32);
@@ -557,7 +558,8 @@ h1 span {
 }
 
 .recommendation-card footer .ghost,
-.favorite-list button {
+.favorite-list button,
+.history-list button {
   color: #91a29e;
   background: transparent;
 }
@@ -750,6 +752,42 @@ h1 span {
   border-top: 1px solid var(--line);
 }
 
+.history-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.history-list article {
+  display: flex;
+  min-height: 145px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(11, 24, 21, 0.55);
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.history-list strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #dfe8e5;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.history-list p {
+  margin: 8px 0 18px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.history-list button {
+  align-self: flex-start;
+}
+
 .favorite-list article {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -828,7 +866,8 @@ h1 span {
   }
 
   .card-columns,
-  .trending-grid {
+  .trending-grid,
+  .history-list {
     grid-template-columns: 1fr;
   }
 

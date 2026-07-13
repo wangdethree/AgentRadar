@@ -56,6 +56,20 @@ async def create_search_session(
     )
 
 
+@router.get("", response_model=list[SearchSessionResponse], summary="查看搜索历史")
+async def list_search_sessions(
+    db: DatabaseSession,
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+    session_status: Annotated[str | None, Query(alias="status", max_length=32)] = None,
+) -> list[SearchSessionResponse]:
+    """按时间倒序返回最近搜索，可按执行状态筛选。"""
+    sessions = SearchSessionRepository(db).list_sessions(
+        limit=limit,
+        status=session_status,
+    )
+    return [SearchSessionResponse.model_validate(item) for item in sessions]
+
+
 @router.get("/{session_id}", response_model=SearchSessionResponse, summary="查看搜索会话")
 async def get_search_session(session_id: str, db: DatabaseSession) -> SearchSessionResponse:
     """读取搜索状态、结构化需求与搜索计划。"""

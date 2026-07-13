@@ -29,6 +29,21 @@ class SearchSessionRepository:
         """读取单个搜索会话。"""
         return self.session.get(SearchSession, session_id)
 
+    def list_sessions(
+        self,
+        *,
+        limit: int = 10,
+        status: str | None = None,
+    ) -> list[SearchSession]:
+        """按创建时间倒序读取最近搜索历史。"""
+        statement = select(SearchSession).order_by(
+            SearchSession.created_at.desc(),
+            SearchSession.id.desc(),
+        )
+        if status is not None:
+            statement = statement.where(SearchSession.status == status)
+        return list(self.session.scalars(statement.limit(limit)))
+
     def mark_running(self, search_session: SearchSession) -> None:
         """标记会话开始执行。"""
         search_session.status = "running"

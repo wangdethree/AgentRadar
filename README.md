@@ -95,6 +95,7 @@ npm run build
 - `POST /api/v1/repositories/{owner}/{repo}/analyze`：执行证据化深度分析；
 - `GET /api/v1/repositories/{owner}/{repo}/analysis`：复用最新分析报告；
 - `POST /api/v1/search/sessions`：执行需求解析、搜索、过滤和候选初筛；
+- `GET /api/v1/search/sessions`：按时间倒序查看搜索历史；
 - `POST /api/v1/search/sessions/{session_id}/refine`：复用当前候选和分析报告继续筛选；
 - `GET /api/v1/search/sessions/{session_id}`：查看会话状态与搜索计划；
 - `GET /api/v1/search/sessions/{session_id}/results`：查看阶段结果；

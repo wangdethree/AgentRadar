@@ -3,6 +3,7 @@ import { FormEvent, useState } from 'react'
 import { addFavorite, ignoreRepository } from '../api/interactions'
 import { createSearchSession, getSearchTraces, refineSearchSession } from '../api/search'
 import { FavoritesPanel } from '../components/FavoritesPanel'
+import { RecentSearches } from '../components/RecentSearches'
 import { RecommendationCard } from '../components/RecommendationCard'
 import { TraceTimeline } from '../components/TraceTimeline'
 import { TrendingRadar } from '../components/TrendingRadar'
@@ -20,6 +21,7 @@ export function HomePage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [refinement, setRefinement] = useState('')
   const [favoritesRefreshKey, setFavoritesRefreshKey] = useState(0)
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const health = useHealth()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -33,6 +35,7 @@ export function HomePage() {
     try {
       const result = await createSearchSession(query.trim())
       setSearchResult(result)
+      setHistoryRefreshKey((value) => value + 1)
       setTraces(await getSearchTraces(result.session.id))
       window.setTimeout(() => document.querySelector('#results')?.scrollIntoView(), 80)
     } catch (reason) {
@@ -40,6 +43,11 @@ export function HomePage() {
     } finally {
       setIsSearching(false)
     }
+  }
+
+  function handleReuseQuery(previousQuery: string) {
+    setQuery(previousQuery)
+    document.querySelector('#discover')?.scrollIntoView()
   }
 
   async function handleFavorite(fullName: string) {
@@ -91,6 +99,7 @@ export function HomePage() {
         <div className="nav-links" aria-label="功能导航">
           <a href="#discover">智能搜索</a>
           <a href="#trending">热门雷达</a>
+          <a href="#history">搜索历史</a>
           <a href="#favorites">收藏项目</a>
         </div>
         <span className={`health ${health.isSuccess ? 'is-online' : ''}`}>
@@ -216,6 +225,7 @@ export function HomePage() {
 
       <div className="shell lower-dashboard">
         <TrendingRadar />
+        <RecentSearches refreshKey={historyRefreshKey} onReuse={handleReuseQuery} />
         <FavoritesPanel refreshKey={favoritesRefreshKey} />
       </div>
 
