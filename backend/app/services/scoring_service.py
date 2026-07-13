@@ -43,8 +43,8 @@ def calculate_recommendation_score(
     )
     engineering_count = sum(bool(value) for value in engineering_values.values())
 
-    reference_time = now or datetime.now(UTC)
-    activity_time = repository.pushed_at or repository.github_updated_at
+    reference_time = _as_utc(now or datetime.now(UTC))
+    activity_time = _as_utc(repository.pushed_at or repository.github_updated_at)
     days_since_update = max((reference_time - activity_time).days, 0)
     if days_since_update <= 30:
         activity = 10
@@ -73,6 +73,11 @@ def calculate_recommendation_score(
         activity=activity,
         difficulty_match=difficulty,
     )
+
+
+def _as_utc(value: datetime) -> datetime:
+    """兼容 SQLite 恢复的无时区时间。"""
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 def build_recommendations(

@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react'
 
 import { addFavorite, ignoreRepository } from '../api/interactions'
-import { createSearchSession, getSearchTraces } from '../api/search'
+import { createSearchSession, getSearchTraces, refineSearchSession } from '../api/search'
 import { FavoritesPanel } from '../components/FavoritesPanel'
 import { RecommendationCard } from '../components/RecommendationCard'
 import { TraceTimeline } from '../components/TraceTimeline'
@@ -18,6 +18,7 @@ export function HomePage() {
   const [isSearching, setIsSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [refinement, setRefinement] = useState('')
   const [favoritesRefreshKey, setFavoritesRefreshKey] = useState(0)
   const health = useHealth()
 
@@ -60,6 +61,24 @@ export function HomePage() {
         : null,
     )
     setNotice(`已忽略 ${fullName}，后续搜索会自动过滤`)
+  }
+
+  async function handleRefine(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!searchResult || !refinement.trim()) return
+    setIsSearching(true)
+    setError(null)
+    try {
+      const result = await refineSearchSession(searchResult.session.id, refinement.trim())
+      setSearchResult(result)
+      setTraces(await getSearchTraces(result.session.id))
+      setRefinement('')
+      setNotice('已复用当前候选和已有报告完成重新筛选')
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '继续筛选失败')
+    } finally {
+      setIsSearching(false)
+    }
   }
 
   return (
@@ -170,6 +189,21 @@ export function HomePage() {
               />
             ))}
           </div>
+          <form className="refine-panel" onSubmit={(event) => void handleRefine(event)}>
+            <div>
+              <strong>继续筛选当前结果</strong>
+              <span>复用候选项目和已有分析，不会从头重新搜索。</span>
+            </div>
+            <input
+              value={refinement}
+              onChange={(event) => setRefinement(event.target.value)}
+              placeholder="例如：只保留最近半年更新、不要 CrewAI、找更简单的"
+              disabled={isSearching}
+            />
+            <button type="submit" disabled={!refinement.trim() || isSearching}>
+              {isSearching ? '筛选中…' : '追加条件'}
+            </button>
+          </form>
           {traces.length > 0 && <TraceTimeline traces={traces} />}
         </section>
       )}
@@ -186,4 +220,3 @@ export function HomePage() {
     </main>
   )
 }
-

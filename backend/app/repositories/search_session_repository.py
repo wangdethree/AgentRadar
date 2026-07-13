@@ -33,6 +33,7 @@ class SearchSessionRepository:
         """标记会话开始执行。"""
         search_session.status = "running"
         search_session.error_message = None
+        search_session.finished_at = None
         self.session.commit()
 
     def save_plan(

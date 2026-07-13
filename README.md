@@ -11,7 +11,7 @@ AgentRadar 是面向 AI Agent 学习者、求职者和开发者的 GitHub 项目
 - [x] 阶段 2：智能搜索基础链路
 - [x] 阶段 3：深度研究与推荐
 - [x] 阶段 4：热门项目雷达
-- [ ] 阶段 5：前端与交互
+- [x] 阶段 5：前端与交互
 - [ ] 阶段 6：测试、文档与部署
 
 ## 技术栈
@@ -87,12 +87,19 @@ npm run build
 - `POST /api/v1/repositories/{owner}/{repo}/analyze`：执行证据化深度分析；
 - `GET /api/v1/repositories/{owner}/{repo}/analysis`：复用最新分析报告；
 - `POST /api/v1/search/sessions`：执行需求解析、搜索、过滤和候选初筛；
+- `POST /api/v1/search/sessions/{session_id}/refine`：复用当前候选和分析报告继续筛选；
 - `GET /api/v1/search/sessions/{session_id}`：查看会话状态与搜索计划；
 - `GET /api/v1/search/sessions/{session_id}/results`：查看阶段结果；
-- `GET /api/v1/search/sessions/{session_id}/traces`：查看可解释执行轨迹。
+- `GET /api/v1/search/sessions/{session_id}/traces`：查看可解释执行轨迹；
 - `GET /api/v1/trending/daily`：今日热门；
 - `GET /api/v1/trending/weekly`：本周上升；
 - `GET /api/v1/trending/potential`：新项目潜力；
-- `GET /api/v1/trending/categories`：热门项目分类。
+- `GET /api/v1/trending/categories`：热门项目分类；
+- `POST /api/v1/favorites`：收藏已经同步的仓库；
+- `GET /api/v1/favorites`：查看收藏列表；
+- `DELETE /api/v1/favorites/{favorite_id}`：取消收藏；
+- `POST /api/v1/ignored-repositories`：忽略仓库并在后续搜索中提前过滤；
+- `GET /api/v1/ignored-repositories`：查看忽略列表；
+- `DELETE /api/v1/ignored-repositories/{ignored_id}`：恢复被忽略的仓库。
 
 更多信息见 [API 文档](docs/api.md)。

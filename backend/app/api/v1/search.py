@@ -14,6 +14,7 @@ from app.schemas.search import (
     SearchExecutionResponse,
     SearchResultResponse,
     SearchSessionCreate,
+    SearchSessionRefine,
     SearchSessionResponse,
 )
 from app.tools.github.client import GitHubClient
@@ -57,6 +58,35 @@ async def get_search_session(session_id: str, db: DatabaseSession) -> SearchSess
     if search_session is None:
         raise HTTPException(status_code=404, detail="搜索会话不存在")
     return SearchSessionResponse.model_validate(search_session)
+
+
+@router.post(
+    "/{session_id}/refine",
+    response_model=SearchExecutionResponse,
+    summary="继续筛选当前会话",
+)
+async def refine_search_session(
+    session_id: str,
+    payload: SearchSessionRefine,
+    db: DatabaseSession,
+    github_client: GitHubClientDependency,
+) -> SearchExecutionResponse:
+    """复用当前候选和已有分析报告，按追加条件重新推荐。"""
+    store = SearchSessionRepository(db)
+    if store.get(session_id) is None:
+        raise HTTPException(status_code=404, detail="搜索会话不存在")
+    state = await SearchWorkflow(db, github_client).refine(session_id, payload.feedback)
+    search_session = store.get(session_id)
+    if search_session is None:  # pragma: no cover - 内部一致性保护
+        raise HTTPException(status_code=500, detail="搜索会话保存失败")
+    return SearchExecutionResponse(
+        session=SearchSessionResponse.model_validate(search_session),
+        discovered_count=len(state["discovered_repositories"]),
+        filtered_count=len(state["filtered_repositories"]),
+        screened_count=len(state["screened_repositories"]),
+        research_targets=state["research_targets"],
+        final_recommendations=state["final_recommendations"],
+    )
 
 
 @router.get(

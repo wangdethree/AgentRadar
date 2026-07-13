@@ -12,3 +12,12 @@ export function getSearchTraces(sessionId: string): Promise<ExecutionTrace[]> {
   return apiRequest(`/search/sessions/${sessionId}/traces`)
 }
 
+export function refineSearchSession(
+  sessionId: string,
+  feedback: string,
+): Promise<SearchExecutionResponse> {
+  return apiRequest(`/search/sessions/${sessionId}/refine`, {
+    method: 'POST',
+    body: JSON.stringify({ feedback }),
+  })
+}

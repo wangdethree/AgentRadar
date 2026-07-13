@@ -62,6 +62,19 @@ GET /api/v1/search/sessions/{session_id}/traces
 
 工作流随后会对最多五个目标读取 README、目录、依赖文件、Release 和 Issue，输出最多三个最终推荐。每个推荐包含六维评分、能力证据、工程分析、优缺点、套壳风险和来自真实目录的阅读路径。
 
+如果首轮结果还需要收窄，可以在同一个会话中追加条件：
+
+```http
+POST /api/v1/search/sessions/{session_id}/refine
+Content-Type: application/json
+
+{
+  "feedback": "只保留最近半年更新、不要 CrewAI、优先简单项目"
+}
+```
+
+继续筛选会复用当前候选仓库和已经保存的分析报告，不会再次执行 GitHub 全量搜索。新的要求、筛选结果、最终推荐和 `refine_session` 执行轨迹仍保存在原会话中。
+
 ## 单仓库分析
 
 ```http
@@ -81,3 +94,17 @@ GET /api/v1/trending/categories
 ```
 
 榜单支持 `limit` 和 `category` 查询参数。趋势响应同时显示热度分、质量分、Agent 能力完整度和快照置信度。设置 `TRENDING_SCHEDULER_ENABLED=true` 后，单进程部署会按照配置间隔自动采集固定主题；多副本部署应将任务迁移到独立 Worker。
+
+## 收藏与忽略
+
+```http
+POST   /api/v1/favorites
+GET    /api/v1/favorites
+DELETE /api/v1/favorites/{favorite_id}
+
+POST   /api/v1/ignored-repositories
+GET    /api/v1/ignored-repositories
+DELETE /api/v1/ignored-repositories/{ignored_id}
+```
+
+收藏支持记录来源会话和个人备注。忽略列表会在智能搜索的规则过滤阶段生效，避免消耗后续深度研究资源；删除忽略记录后，该仓库可以再次进入候选集。

@@ -66,6 +66,12 @@ class SearchSessionCreate(BaseModel):
     query: str = Field(min_length=3, max_length=2000)
 
 
+class SearchSessionRefine(BaseModel):
+    """在当前搜索会话中追加筛选条件。"""
+
+    feedback: str = Field(min_length=2, max_length=1000)
+
+
 class SearchSessionResponse(BaseModel):
     """搜索会话状态响应。"""
 

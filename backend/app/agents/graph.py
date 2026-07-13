@@ -11,6 +11,7 @@ from app.models.search import SearchSession
 from app.repositories.analysis_repository import AnalysisReportRepository
 from app.repositories.interaction_repository import InteractionRepository
 from app.repositories.search_session_repository import SearchSessionRepository
+from app.schemas.github import RepositorySummary
 from app.services.filter_service import normalize_and_filter, screen_candidates
 from app.services.requirement_service import build_search_plan, parse_requirement
 from app.services.research_service import ResearchService
@@ -59,6 +60,94 @@ class SearchWorkflow:
                 result = await graph.ainvoke(initial_state)
                 return SearchSessionState(**result)
             return await self._run_sequential(initial_state, search_session)
+        except Exception as error:
+            self.session_store.mark_failed(search_session, error)
+            raise
+
+    async def refine(self, session_id: str, feedback: str) -> SearchSessionState:
+        """复用已有候选和分析报告，按追加条件重新初筛与推荐。"""
+        started_at = perf_counter()
+        search_session = self._require_session(session_id)
+        existing_results = self.session_store.list_results(session_id, "screened")
+        if not existing_results:
+            raise ValueError("当前会话没有可复用的候选项目")
+        self.session_store.mark_running(search_session)
+        combined_query = f"{search_session.user_query}\n追加筛选条件：{feedback}"
+        try:
+            requirement = parse_requirement(combined_query)
+            plan = build_search_plan(requirement)
+            repositories = [
+                RepositorySummary.model_validate(item.repository) for item in existing_results
+            ]
+            screened = screen_candidates(repositories, requirement)
+            targets = [item for item in screened if item.research_level != "skip"][
+                : plan.max_research_targets
+            ]
+            report_store = AnalysisReportRepository(self.session_store.session)
+            reports = []
+            new_reports = []
+            research_service = ResearchService(self.github_client)
+            for target in targets:
+                stored_repository = next(
+                    item.repository
+                    for item in existing_results
+                    if item.repository.full_name.lower() == target.repository.full_name.lower()
+                )
+                report_type = "deep" if target.research_level == "deep" else "shallow"
+                existing_report = report_store.get_latest(stored_repository.id, report_type)
+                if existing_report is not None:
+                    reports.append(report_store.to_schema(existing_report))
+                    continue
+                report = await research_service.research(
+                    target.repository,
+                    report_type=report_type,
+                )
+                reports.append(report)
+                new_reports.append(report)
+            recommendations = build_recommendations(targets, reports, requirement)
+            self.session_store.save_plan(search_session, requirement, plan)
+            self.session_store.replace_stage_results(
+                search_session,
+                stage="screened",
+                items=screened,
+            )
+            self.session_store.replace_stage_results(
+                search_session,
+                stage="research_target",
+                items=targets,
+            )
+            for report in new_reports:
+                report_store.save(report)
+            self.session_store.replace_final_results(search_session, recommendations)
+            self.session_store.mark_completed(search_session)
+            refinement_summary = (
+                f"复用 {len(repositories)} 个候选，生成 {len(recommendations)} 个推荐"
+            )
+            self.session_store.add_trace(
+                search_session,
+                node_name="refine_session",
+                input_summary=f"追加条件：{feedback[:300]}",
+                output_summary=refinement_summary,
+                duration_ms=int((perf_counter() - started_at) * 1000),
+                tool_names=[] if len(new_reports) == 0 else ["research_repository"],
+            )
+            return {
+                "session_id": session_id,
+                "user_query": search_session.user_query,
+                "parsed_requirement": requirement,
+                "search_plan": plan,
+                "discovered_repositories": repositories,
+                "filtered_repositories": repositories,
+                "screened_repositories": screened,
+                "research_targets": targets,
+                "research_reports": reports,
+                "scored_recommendations": recommendations,
+                "final_recommendations": recommendations,
+                "search_round": 0,
+                "tool_call_count": len(new_reports) * 5,
+                "llm_call_count": 0,
+                "errors": [],
+            }
         except Exception as error:
             self.session_store.mark_failed(search_session, error)
             raise

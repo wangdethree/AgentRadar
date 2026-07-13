@@ -119,9 +119,13 @@ async def test_search_workflow_runs_full_foundation_chain() -> None:
 
     with Session(engine) as session:
         async with GitHubClient(settings, transport=httpx.MockTransport(github_handler)) as client:
-            state = await SearchWorkflow(session, client).run(
+            workflow = SearchWorkflow(session, client)
+            state = await workflow.run(
                 "寻找 Python LangGraph FastAPI 项目，包含工具调用和状态管理，适合简历",
                 prefer_langgraph=False,
+            )
+            refined_state = await workflow.refine(
+                state["session_id"], "只保留 Python 项目，不要 CrewAI"
             )
 
         search_session = session.get(SearchSession, state["session_id"])
@@ -133,5 +137,7 @@ async def test_search_workflow_runs_full_foundation_chain() -> None:
         assert state["research_targets"][0].research_level == "deep"
         assert len(state["final_recommendations"]) == 1
         assert state["final_recommendations"][0].report.reading_path
-        assert session.scalar(select(func.count()).select_from(ExecutionTrace)) == 10
+        assert refined_state["session_id"] == state["session_id"]
+        assert refined_state["parsed_requirement"].excluded_features == ["CrewAI"]
+        assert session.scalar(select(func.count()).select_from(ExecutionTrace)) == 11
         assert session.scalar(select(func.count()).select_from(SearchResult)) == 3
