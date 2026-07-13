@@ -25,9 +25,34 @@ export interface EvidenceItem {
   observation: string
 }
 
+export interface AgentCapabilities {
+  tool_calling: boolean
+  state_management: boolean
+  workflow_orchestration: boolean
+  multi_round_execution: boolean
+  memory: boolean
+  human_in_the_loop: boolean
+  persistence: boolean
+  evaluation: boolean
+}
+
+export interface EngineeringAnalysis {
+  has_api: boolean
+  has_tests: boolean
+  has_docker: boolean
+  has_database: boolean
+  has_configuration: boolean
+  has_documentation: boolean
+  dependency_files: string[]
+  file_count: number
+}
+
 export interface ResearchReport {
+  repository: RepositorySummary
   report_type: 'shallow' | 'deep'
   project_summary: string
+  agent_capabilities: AgentCapabilities
+  engineering_analysis: EngineeringAnalysis
   strengths: string[]
   weaknesses: string[]
   evidence: EvidenceItem[]

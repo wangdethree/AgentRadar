@@ -224,7 +224,9 @@ export function HomePage() {
       )}
 
       <div className="shell lower-dashboard">
-        <TrendingRadar />
+        <TrendingRadar
+          onFavoritesChanged={() => setFavoritesRefreshKey((value) => value + 1)}
+        />
         <RecentSearches refreshKey={historyRefreshKey} onReuse={handleReuseQuery} />
         <FavoritesPanel refreshKey={favoritesRefreshKey} />
       </div>

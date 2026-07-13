@@ -88,6 +88,8 @@ GET  /api/v1/repositories/{owner}/{repo}/analysis?report_type=deep
 
 `analyze` 会消耗 GitHub API 配额并保存报告；`analysis` 只读取本地最新报告。
 
+热门榜单的“查看深度分析”会优先调用 `analysis` 复用已有报告，只有收到 404 时才调用 `analyze`。这样稳定 Demo 数据可以离线展示，真实项目也能按需完成首次调查。
+
 ## 热门项目雷达
 
 ```http

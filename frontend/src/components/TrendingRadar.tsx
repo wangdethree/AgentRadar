@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 
+import { addFavorite, ignoreRepository } from '../api/interactions'
+import { getOrAnalyzeRepository } from '../api/repositories'
 import { getTrending, type TrendingKind } from '../api/trending'
-import type { TrendingCardData } from '../types/api'
+import type { ResearchReport, TrendingCardData } from '../types/api'
+import { RepositoryDetailPanel } from './RepositoryDetailPanel'
 
 const tabs: Array<{ id: TrendingKind; label: string }> = [
   { id: 'daily', label: '今日热门' },
@@ -9,11 +12,18 @@ const tabs: Array<{ id: TrendingKind; label: string }> = [
   { id: 'potential', label: '新项目潜力' },
 ]
 
-export function TrendingRadar() {
+interface TrendingRadarProps {
+  onFavoritesChanged: () => void
+}
+
+export function TrendingRadar({ onFavoritesChanged }: TrendingRadarProps) {
   const [activeTab, setActiveTab] = useState<TrendingKind>('daily')
   const [cards, setCards] = useState<TrendingCardData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [analyzing, setAnalyzing] = useState<string | null>(null)
+  const [selectedReport, setSelectedReport] = useState<ResearchReport | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -33,6 +43,39 @@ export function TrendingRadar() {
       cancelled = true
     }
   }, [activeTab])
+
+  async function handleAnalyze(fullName: string) {
+    setAnalyzing(fullName)
+    setError(null)
+    try {
+      setSelectedReport(await getOrAnalyzeRepository(fullName))
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '项目分析失败')
+    } finally {
+      setAnalyzing(null)
+    }
+  }
+
+  async function handleFavorite(fullName: string) {
+    try {
+      await addFavorite(fullName)
+      onFavoritesChanged()
+      setNotice(`已收藏 ${fullName}`)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '收藏失败')
+    }
+  }
+
+  async function handleIgnore(fullName: string) {
+    try {
+      await ignoreRepository(fullName)
+      setCards((items) => items.filter((item) => item.repository.full_name !== fullName))
+      setSelectedReport(null)
+      setNotice(`已忽略 ${fullName}`)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '忽略失败')
+    }
+  }
 
   return (
     <section className="dashboard-section" id="trending">
@@ -57,6 +100,7 @@ export function TrendingRadar() {
       </div>
       {isLoading && <p className="empty-state">正在读取趋势快照…</p>}
       {error && <p className="error-banner">{error}</p>}
+      {notice && <p className="notice-banner">{notice}</p>}
       {!isLoading && !error && cards.length === 0 && (
         <p className="empty-state">快照正在积累。运行定时采集后，这里会出现真实增长榜单。</p>
       )}
@@ -74,10 +118,25 @@ export function TrendingRadar() {
               <span><strong>{card.quality_score}</strong> 质量</span>
               <span><strong>{card.metrics.stars_24h ?? '—'}</strong> 24h Star</span>
             </div>
+            <button
+              type="button"
+              className="analyze-button"
+              disabled={analyzing !== null}
+              onClick={() => void handleAnalyze(card.repository.full_name)}
+            >
+              {analyzing === card.repository.full_name ? '正在读取证据…' : '查看深度分析'}
+            </button>
           </article>
         ))}
       </div>
+      {selectedReport && (
+        <RepositoryDetailPanel
+          report={selectedReport}
+          onClose={() => setSelectedReport(null)}
+          onFavorite={handleFavorite}
+          onIgnore={handleIgnore}
+        />
+      )}
     </section>
   )
 }
-

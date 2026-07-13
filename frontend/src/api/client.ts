@@ -4,6 +4,16 @@ interface RequestOptions extends RequestInit {
   signal?: AbortSignal
 }
 
+export class APIRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message)
+    this.name = 'APIRequestError'
+  }
+}
+
 export async function apiRequest<ResponseT>(
   path: string,
   options: RequestOptions = {},
@@ -18,10 +28,9 @@ export async function apiRequest<ResponseT>(
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null
-    throw new Error(body?.detail ?? `请求失败：HTTP ${response.status}`)
+    throw new APIRequestError(body?.detail ?? `请求失败：HTTP ${response.status}`, response.status)
   }
 
   if (response.status === 204) return undefined as ResponseT
   return response.json() as Promise<ResponseT>
 }
-

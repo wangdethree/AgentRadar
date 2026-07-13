@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from app.api.dependencies import get_github_client
 from app.core.config import Settings
 from app.core.database import get_db
+from app.demo import load_demo_dataset, seed_demo_data
 from app.main import app
 from app.models import Base, Repository
 from app.tools.github.client import GitHubClient
@@ -59,6 +60,39 @@ def test_search_repository_candidates_api() -> None:
         assert response.status_code == 200
         assert response.json()["items"][0]["full_name"] == "example/research-agent"
         assert session.scalar(select(func.count()).select_from(Repository)) == 1
+    finally:
+        app.dependency_overrides.clear()
+        session.close()
+
+
+def test_get_cached_analysis_does_not_require_github_client() -> None:
+    """详情入口命中已有报告时不应调用 GitHub 外部服务。"""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    session = Session(engine)
+    seed_demo_data(session, load_demo_dataset())
+
+    def override_database() -> Iterator[Session]:
+        yield session
+
+    app.dependency_overrides[get_db] = override_database
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                "/api/v1/repositories/agentradar-demo/"
+                "langgraph-research-agent/analysis",
+                params={"report_type": "deep"},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["repository"]["full_name"] == (
+            "agentradar-demo/langgraph-research-agent"
+        )
+        assert response.json()["evidence"][0]["source"] == "demo_fixture"
     finally:
         app.dependency_overrides.clear()
         session.close()
