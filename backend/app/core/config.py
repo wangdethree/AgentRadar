@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     github_timeout_seconds: float = 15.0
     github_max_retries: int = 2
     github_cache_ttl_seconds: int = 300
+    trending_scheduler_enabled: bool = False
+    trending_collection_interval_hours: int = 6
 
     @computed_field
     @property
