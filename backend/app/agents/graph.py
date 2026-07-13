@@ -2,7 +2,7 @@
 
 from collections.abc import Awaitable, Callable
 from time import perf_counter
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -57,8 +57,8 @@ class SearchWorkflow:
                     if error.name != "langgraph":
                         raise
                     return await self._run_sequential(initial_state, search_session)
-                result = await graph.ainvoke(initial_state)
-                return SearchSessionState(**result)
+                result: SearchSessionState = await graph.ainvoke(initial_state)
+                return result
             return await self._run_sequential(initial_state, search_session)
         except Exception as error:
             self.session_store.mark_failed(search_session, error)
@@ -199,7 +199,8 @@ class SearchWorkflow:
             self.persist_session_node,
         )
         for node in node_sequence:
-            state.update(await node(state))
+            updates = await node(state)
+            state = cast(SearchSessionState, {**state, **updates})
         if search_session.status != "completed":  # pragma: no cover - 防御性分支
             self.session_store.mark_completed(search_session)
         return state

@@ -50,3 +50,8 @@ quote-style = "double"
 python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# APScheduler 3.x 未发布 py.typed 标记，只在任务启动边界忽略第三方类型缺失。
+module = ["apscheduler.*"]
+ignore_missing_imports = true

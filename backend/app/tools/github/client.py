@@ -173,8 +173,9 @@ class GitHubClient:
             payload = response.json()
         except json.JSONDecodeError:
             return f"GitHub API 返回 HTTP {response.status_code}"
-        if isinstance(payload, dict) and isinstance(payload.get("message"), str):
-            return payload["message"][:500]
+        message = payload.get("message") if isinstance(payload, dict) else None
+        if isinstance(message, str):
+            return message[:500]
         return f"GitHub API 返回 HTTP {response.status_code}"
 
     @staticmethod
@@ -185,4 +186,3 @@ class GitHubClient:
         """使用排序后的参数构造稳定缓存键。"""
         encoded_params = json.dumps(dict(params or {}), sort_keys=True, ensure_ascii=True)
         return f"github:{path.lstrip('/')}:{encoded_params}"
-

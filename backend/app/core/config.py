@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     trending_scheduler_enabled: bool = False
     trending_collection_interval_hours: int = 6
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def cors_origins(self) -> list[str]:
         """把逗号分隔的前端地址转换为 CORS 配置列表。"""

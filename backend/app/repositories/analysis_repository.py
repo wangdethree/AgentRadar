@@ -68,5 +68,5 @@ class AnalysisReportRepository:
             weaknesses=record.weaknesses,
             evidence=[EvidenceItem.model_validate(item) for item in record.evidence],
             reading_path=[ReadingPathItem.model_validate(item) for item in record.reading_path],
-            wrapper_risk=record.wrapper_risk,  # type: ignore[arg-type]
+            wrapper_risk=record.wrapper_risk,
         )

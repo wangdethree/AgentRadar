@@ -161,7 +161,7 @@ class TrendService:
                 now=reference_time,
             )
             quality, completeness = _calculate_quality(analysis_by_repository.get(repository.id))
-            metrics = TrendMetrics(
+            trend_metrics = TrendMetrics(
                 stars_24h=raw["stars_24h"],
                 stars_7d=raw["stars_7d"],
                 forks_7d=raw["forks_7d"],
@@ -173,10 +173,10 @@ class TrendService:
                 TrendingCard(
                     repository=RepositorySummary.model_validate(repository),
                     category=repository_category,
-                    metrics=metrics,
+                    metrics=trend_metrics,
                     quality_score=quality,
                     agent_completeness=completeness,
-                    trending_reason=_build_trending_reason(metrics),
+                    trending_reason=_build_trending_reason(trend_metrics),
                 )
             )
 
