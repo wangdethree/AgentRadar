@@ -16,7 +16,7 @@ AgentRadar 是面向 AI Agent 学习者、求职者和开发者的 GitHub 项目
 
 ## 技术栈
 
-- 后端：FastAPI、Pydantic、SQLAlchemy、LangGraph
+- 后端：Python 3.11、FastAPI、Pydantic、SQLAlchemy、LangGraph
 - 前端：React、TypeScript、Vite、TanStack Query
 - 数据：开发环境使用 SQLite，完整 V1 支持 PostgreSQL
 - 工程：pytest、Ruff、MyPy、ESLint、Prettier、Docker Compose
@@ -54,6 +54,8 @@ cp .env.example .env
 docker compose up --build
 ```
 
+容器启动后，统一入口为 <http://localhost:8080>，后端 API 仍可通过 <http://localhost:8000> 直接访问。
+
 ## 质量检查
 
 ```bash
@@ -74,4 +76,3 @@ npm run build
 - V1 只执行 GitHub 只读操作；
 - 不自动运行被研究仓库中的代码或 Shell 命令；
 - 对外部请求统一设置超时、有限重试并记录可解释错误。
-
