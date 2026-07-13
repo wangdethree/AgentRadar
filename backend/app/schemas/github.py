@@ -75,3 +75,14 @@ class RepositorySnapshotData(BaseModel):
     forks: int
     open_issues: int
     captured_at: datetime | None = None
+
+
+class RepositorySnapshotResponse(BaseModel):
+    """供趋势图展示的只读指标快照。"""
+
+    model_config = ConfigDict(frozen=True, from_attributes=True)
+
+    stars: int
+    forks: int
+    open_issues: int
+    captured_at: datetime

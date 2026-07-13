@@ -22,9 +22,12 @@ GET /api/v1/repositories/search?q=langgraph%20language%3APython&page=1&per_page=
 GET /api/v1/repositories/{owner}/{repo}
 GET /api/v1/repositories/{owner}/{repo}/readme
 GET /api/v1/repositories/{owner}/{repo}/tree?ref=main&depth=3
+GET /api/v1/repositories/{owner}/{repo}/snapshots?days=30
 ```
 
 README 默认最多读取 300 KB，普通文件默认最多读取 200 KB。目录树默认深度为 3，最多返回 1000 项，避免把无关大段内容送入模型。
+
+`snapshots` 按时间正序返回最近 1～365 天内最多 1000 个真实指标点，默认 30 天、500 个点。接口不会对缺失日期插值；前端少于两个点时会显示“等待积累”，避免伪造趋势。
 
 ## 错误格式
 

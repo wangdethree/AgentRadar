@@ -64,3 +64,22 @@ class RepositoryRepository:
         self.session.commit()
         self.session.refresh(snapshot)
         return snapshot
+
+    def list_snapshots(
+        self,
+        repository_id: int,
+        *,
+        captured_after: datetime,
+        limit: int = 500,
+    ) -> list[RepositorySnapshot]:
+        """按时间正序读取指定窗口内的指标快照。"""
+        statement = (
+            select(RepositorySnapshot)
+            .where(
+                RepositorySnapshot.repository_id == repository_id,
+                RepositorySnapshot.captured_at >= captured_after,
+            )
+            .order_by(RepositorySnapshot.captured_at.asc(), RepositorySnapshot.id.asc())
+            .limit(limit)
+        )
+        return list(self.session.scalars(statement))

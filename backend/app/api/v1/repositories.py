@@ -1,5 +1,6 @@
 """仓库搜索与研究资料 API。"""
 
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,7 +11,11 @@ from app.core.database import get_db
 from app.repositories.analysis_repository import AnalysisReportRepository
 from app.repositories.repository_repository import RepositoryRepository
 from app.schemas.analysis import ResearchReportData
-from app.schemas.github import RepositorySearchPage, RepositorySummary
+from app.schemas.github import (
+    RepositorySearchPage,
+    RepositorySnapshotResponse,
+    RepositorySummary,
+)
 from app.services.repository_service import RepositoryService
 from app.services.research_service import ResearchService
 from app.tools.github.client import GitHubClient
@@ -70,6 +75,31 @@ async def read_repository_tree(
 ) -> RepositoryTree:
     """按指定深度读取仓库目录树。"""
     return await get_repository_tree(github_client, owner, repo, ref, depth=depth)
+
+
+@router.get(
+    "/{owner}/{repo}/snapshots",
+    response_model=list[RepositorySnapshotResponse],
+    summary="读取仓库趋势快照",
+)
+async def get_repository_snapshots(
+    owner: str,
+    repo: str,
+    db: DatabaseSession,
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    limit: Annotated[int, Query(ge=2, le=1000)] = 500,
+) -> list[RepositorySnapshotResponse]:
+    """返回指定天数内的真实指标快照，不插值或补造缺失数据。"""
+    store = RepositoryRepository(db)
+    repository = store.get_by_full_name(f"{owner}/{repo}")
+    if repository is None:
+        raise HTTPException(status_code=404, detail="仓库尚未同步")
+    snapshots = store.list_snapshots(
+        repository.id,
+        captured_after=datetime.now(UTC) - timedelta(days=days),
+        limit=limit,
+    )
+    return [RepositorySnapshotResponse.model_validate(item) for item in snapshots]
 
 
 @router.post(

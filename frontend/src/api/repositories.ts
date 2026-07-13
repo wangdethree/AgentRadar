@@ -1,5 +1,5 @@
 import { apiRequest, APIRequestError } from './client'
-import type { ResearchReport } from '../types/api'
+import type { RepositorySnapshot, ResearchReport } from '../types/api'
 
 function repositoryPath(fullName: string): string {
   const [owner, repo] = fullName.split('/', 2)
@@ -15,4 +15,8 @@ export async function getOrAnalyzeRepository(fullName: string): Promise<Research
     if (!(reason instanceof APIRequestError) || reason.status !== 404) throw reason
   }
   return apiRequest(`/repositories/${path}/analyze?report_type=deep`, { method: 'POST' })
+}
+
+export function getRepositorySnapshots(fullName: string, days = 30): Promise<RepositorySnapshot[]> {
+  return apiRequest(`/repositories/${repositoryPath(fullName)}/snapshots?days=${days}`)
 }

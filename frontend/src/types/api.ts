@@ -14,6 +14,13 @@ export interface RepositorySummary {
   pushed_at: string | null
 }
 
+export interface RepositorySnapshot {
+  stars: number
+  forks: number
+  open_issues: number
+  captured_at: string
+}
+
 export interface ReadingPathItem {
   path: string
   reason: string

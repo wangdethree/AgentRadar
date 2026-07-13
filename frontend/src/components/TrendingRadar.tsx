@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import { addFavorite, ignoreRepository } from '../api/interactions'
-import { getOrAnalyzeRepository } from '../api/repositories'
+import { getOrAnalyzeRepository, getRepositorySnapshots } from '../api/repositories'
 import { getTrending, type TrendingKind } from '../api/trending'
-import type { ResearchReport, TrendingCardData } from '../types/api'
+import type { RepositorySnapshot, ResearchReport, TrendingCardData } from '../types/api'
 import { RepositoryDetailPanel } from './RepositoryDetailPanel'
 
 const tabs: Array<{ id: TrendingKind; label: string }> = [
@@ -23,6 +23,7 @@ export function TrendingRadar({ onFavoritesChanged }: TrendingRadarProps) {
   const [error, setError] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState<string | null>(null)
   const [selectedReport, setSelectedReport] = useState<ResearchReport | null>(null)
+  const [selectedSnapshots, setSelectedSnapshots] = useState<RepositorySnapshot[]>([])
   const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
@@ -48,7 +49,10 @@ export function TrendingRadar({ onFavoritesChanged }: TrendingRadarProps) {
     setAnalyzing(fullName)
     setError(null)
     try {
-      setSelectedReport(await getOrAnalyzeRepository(fullName))
+      const report = await getOrAnalyzeRepository(fullName)
+      const snapshots = await getRepositorySnapshots(fullName)
+      setSelectedReport(report)
+      setSelectedSnapshots(snapshots)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '项目分析失败')
     } finally {
@@ -71,6 +75,7 @@ export function TrendingRadar({ onFavoritesChanged }: TrendingRadarProps) {
       await ignoreRepository(fullName)
       setCards((items) => items.filter((item) => item.repository.full_name !== fullName))
       setSelectedReport(null)
+      setSelectedSnapshots([])
       setNotice(`已忽略 ${fullName}`)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '忽略失败')
@@ -132,6 +137,7 @@ export function TrendingRadar({ onFavoritesChanged }: TrendingRadarProps) {
       {selectedReport && (
         <RepositoryDetailPanel
           report={selectedReport}
+          snapshots={selectedSnapshots}
           onClose={() => setSelectedReport(null)}
           onFavorite={handleFavorite}
           onIgnore={handleIgnore}

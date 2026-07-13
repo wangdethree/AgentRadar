@@ -94,6 +94,7 @@ npm run build
 - `GET /api/v1/repositories/{owner}/{repo}`：同步仓库详情；
 - `GET /api/v1/repositories/{owner}/{repo}/readme`：读取并解码 README；
 - `GET /api/v1/repositories/{owner}/{repo}/tree?ref=main&depth=3`：读取裁剪后的目录树。
+- `GET /api/v1/repositories/{owner}/{repo}/snapshots?days=30`：读取真实趋势快照；
 - `POST /api/v1/repositories/{owner}/{repo}/analyze`：执行证据化深度分析；
 - `GET /api/v1/repositories/{owner}/{repo}/analysis`：复用最新分析报告；
 - `POST /api/v1/search/sessions`：执行需求解析、搜索、过滤和候选初筛；

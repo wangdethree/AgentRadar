@@ -68,12 +68,17 @@ def test_daily_trending_returns_snapshot_growth() -> None:
     try:
         with TestClient(app) as client:
             response = client.get("/api/v1/trending/daily")
+            snapshots_response = client.get(
+                "/api/v1/repositories/example/langgraph-agent/snapshots",
+                params={"days": 30},
+            )
 
         assert response.status_code == 200
         assert response.json()[0]["repository"]["full_name"] == "example/langgraph-agent"
         assert response.json()[0]["metrics"]["stars_24h"] == 30
         assert response.json()[0]["category"] == "LangGraph"
+        assert snapshots_response.status_code == 200
+        assert [item["stars"] for item in snapshots_response.json()] == [120, 150]
     finally:
         app.dependency_overrides.clear()
         session.close()
-

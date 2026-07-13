@@ -840,6 +840,59 @@ h1 span {
   font-size: 11px;
 }
 
+.trend-chart {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(4, 13, 11, 0.55);
+}
+
+.trend-chart-summary,
+.trend-chart-axis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trend-chart-summary span,
+.trend-chart-axis {
+  color: #6f847e;
+  font-size: 10px;
+}
+
+.trend-chart-summary strong {
+  color: var(--green);
+  font-size: 13px;
+}
+
+.trend-chart svg {
+  display: block;
+  width: 100%;
+  margin: 12px 0 5px;
+}
+
+.trend-chart line {
+  stroke: rgba(143, 181, 171, 0.15);
+  stroke-width: 1;
+}
+
+.trend-chart polyline {
+  fill: none;
+  stroke: var(--green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.trend-chart circle {
+  fill: #07100f;
+  stroke: var(--green);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
 .repository-detail section {
   margin-top: 28px;
 }

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 
-import type { ResearchReport } from '../types/api'
+import type { RepositorySnapshot, ResearchReport } from '../types/api'
+import { TrendSparkline } from './TrendSparkline'
 
 const capabilityLabels: Record<string, string> = {
   tool_calling: '工具调用',
@@ -24,6 +25,7 @@ const engineeringLabels: Record<string, string> = {
 
 interface RepositoryDetailPanelProps {
   report: ResearchReport
+  snapshots: RepositorySnapshot[]
   onClose: () => void
   onFavorite: (fullName: string) => Promise<void>
   onIgnore: (fullName: string) => Promise<void>
@@ -31,6 +33,7 @@ interface RepositoryDetailPanelProps {
 
 export function RepositoryDetailPanel({
   report,
+  snapshots,
   onClose,
   onFavorite,
   onIgnore,
@@ -74,6 +77,11 @@ export function RepositoryDetailPanel({
           <span>套壳风险：{report.wrapper_risk}</span>
           <span>分析等级：{report.report_type}</span>
         </div>
+
+        <section>
+          <h3>Star 趋势</h3>
+          <TrendSparkline snapshots={snapshots} />
+        </section>
 
         <section>
           <h3>Agent 能力</h3>
