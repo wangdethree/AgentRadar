@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,9 +17,19 @@ from app.schemas.health import HealthResponse
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """启动时初始化开发数据库，退出时由各资源依赖负责清理。"""
+    """初始化数据库，并按配置启动热门仓库采集。"""
     init_database()
-    yield
+    settings = get_settings()
+    scheduler: Any | None = None
+    if settings.trending_scheduler_enabled:
+        from app.tasks.scheduler import start_trending_scheduler
+
+        scheduler = start_trending_scheduler(settings.trending_collection_interval_hours)
+    try:
+        yield
+    finally:
+        if scheduler is not None:
+            scheduler.shutdown(wait=False)
 
 
 def create_app() -> FastAPI:

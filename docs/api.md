@@ -70,3 +70,14 @@ GET  /api/v1/repositories/{owner}/{repo}/analysis?report_type=deep
 ```
 
 `analyze` 会消耗 GitHub API 配额并保存报告；`analysis` 只读取本地最新报告。
+
+## 热门项目雷达
+
+```http
+GET /api/v1/trending/daily
+GET /api/v1/trending/weekly
+GET /api/v1/trending/potential
+GET /api/v1/trending/categories
+```
+
+榜单支持 `limit` 和 `category` 查询参数。趋势响应同时显示热度分、质量分、Agent 能力完整度和快照置信度。设置 `TRENDING_SCHEDULER_ENABLED=true` 后，单进程部署会按照配置间隔自动采集固定主题；多副本部署应将任务迁移到独立 Worker。
