@@ -1,6 +1,7 @@
 """搜索会话、阶段结果与执行轨迹模型。"""
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -17,6 +18,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, utc_now
+
+if TYPE_CHECKING:
+    from app.models.repository import Repository
 
 
 def generate_uuid() -> str:
@@ -81,6 +85,7 @@ class SearchResult(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     session: Mapped[SearchSession] = relationship(back_populates="results")
+    repository: Mapped["Repository"] = relationship()
 
 
 class ExecutionTrace(Base):

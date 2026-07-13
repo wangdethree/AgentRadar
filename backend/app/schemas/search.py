@@ -96,3 +96,26 @@ class ExecutionTraceResponse(BaseModel):
     error_message: str | None
     created_at: datetime
 
+
+class SearchResultResponse(BaseModel):
+    """搜索阶段结果及其仓库摘要。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    stage: str
+    relevance_score: float | None
+    final_score: float | None
+    rank: int | None
+    reason: list[str]
+    repository: RepositorySummary
+
+
+class SearchExecutionResponse(BaseModel):
+    """一次基础搜索工作流的即时结果。"""
+
+    session: SearchSessionResponse
+    discovered_count: int
+    filtered_count: int
+    screened_count: int
+    research_targets: list[ScreenedRepository] = Field(default_factory=list)
