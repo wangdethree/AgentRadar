@@ -32,6 +32,8 @@ jobs:
         run: mypy app
       - name: 运行测试
         run: pytest
+      - name: 运行 Agent 离线评测
+        run: python -m app.evaluation evaluation/agent_cases.json
 
   frontend:
     name: 前端检查

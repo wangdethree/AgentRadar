@@ -31,6 +31,15 @@ def test_parse_requirement_does_not_search_excluded_technology() -> None:
     assert all("CrewAI" not in item.query for item in plan.queries)
 
 
+def test_parse_requirement_avoids_overlapping_terms() -> None:
+    """长术语不应再触发与其重叠的短术语。"""
+    evaluation = parse_requirement("我想研究 Agent Evaluation 项目")
+    javascript = parse_requirement("寻找 JavaScript Agent 项目")
+
+    assert evaluation.topics == ["Agent Evaluation"]
+    assert javascript.languages == ["JavaScript"]
+
+
 def test_build_search_plan_produces_complementary_queries() -> None:
     """搜索计划应生成至少三条查询并带有限流预算。"""
     requirement = parse_requirement("Python LangGraph FastAPI 工具调用 简历项目")

@@ -1,0 +1,165 @@
+{
+  "version": "1.0.0",
+  "requirement_cases": [
+    {
+      "id": "beginner-langgraph",
+      "query": "帮我找适合初学者的 Python LangGraph 项目，最好有 FastAPI 和工具调用。",
+      "expected": {
+        "topics": ["LangGraph"],
+        "languages": ["Python"],
+        "preferred_technologies": ["FastAPI", "LangGraph"],
+        "required_capabilities": ["tool calling"],
+        "difficulty": "beginner",
+        "goal": "learn",
+        "excluded_features": []
+      }
+    },
+    {
+      "id": "long-term-memory",
+      "query": "查找具备长期记忆能力的 Python Agent，适合二次开发。",
+      "expected": {
+        "topics": ["Agent Memory"],
+        "languages": ["Python"],
+        "preferred_technologies": [],
+        "required_capabilities": ["memory"],
+        "difficulty": "any",
+        "goal": "secondary_development",
+        "excluded_features": []
+      }
+    },
+    {
+      "id": "fastapi-langgraph",
+      "query": "查找 FastAPI + LangGraph 项目，使用 Python，包含状态管理。",
+      "expected": {
+        "topics": ["LangGraph"],
+        "languages": ["Python"],
+        "preferred_technologies": ["FastAPI", "LangGraph"],
+        "required_capabilities": ["state management"],
+        "difficulty": "any",
+        "goal": "learn",
+        "excluded_features": []
+      }
+    },
+    {
+      "id": "agent-evaluation",
+      "query": "我想研究 Agent Evaluation 项目，最好有 Docker 和评测能力，作为参考。",
+      "expected": {
+        "topics": ["Agent Evaluation"],
+        "languages": [],
+        "preferred_technologies": ["Docker"],
+        "required_capabilities": ["evaluation"],
+        "difficulty": "any",
+        "goal": "reference",
+        "excluded_features": []
+      }
+    },
+    {
+      "id": "multi-agent-resume",
+      "query": "查找适合改造成简历项目的 Python 多 Agent 系统，不要 CrewAI，难度高级。",
+      "expected": {
+        "topics": ["Multi-Agent"],
+        "languages": ["Python"],
+        "preferred_technologies": [],
+        "required_capabilities": ["multi-agent"],
+        "difficulty": "advanced",
+        "goal": "resume_project",
+        "excluded_features": ["CrewAI"]
+      }
+    }
+  ],
+  "research_cases": [
+    {
+      "id": "complete-agent",
+      "repository": {
+        "github_id": 9001,
+        "full_name": "fixture/langgraph-fastapi-agent",
+        "name": "langgraph-fastapi-agent",
+        "owner": "fixture",
+        "description": "Python LangGraph FastAPI agent with tool calling and state management",
+        "html_url": "https://github.com/fixture/langgraph-fastapi-agent",
+        "language": "Python",
+        "topics": ["langgraph", "fastapi", "agent", "tool-calling"],
+        "stars": 600,
+        "forks": 70,
+        "open_issues": 8,
+        "default_branch": "main",
+        "is_fork": false,
+        "is_archived": false,
+        "has_readme": true,
+        "github_created_at": "2025-01-01T00:00:00Z",
+        "github_updated_at": "2026-07-10T00:00:00Z",
+        "pushed_at": "2026-07-10T00:00:00Z"
+      },
+      "readme_path": "README.md",
+      "readme_content": "A production LangGraph research agent using StateGraph, bind_tools, an agent loop, checkpointer memory, interrupt_before human-in-the-loop, SQLite persistence and evaluation.",
+      "tree_paths": [
+        "app/main.py",
+        "app/api/routes.py",
+        "app/graph/state.py",
+        "app/graph/nodes.py",
+        "app/tools/search.py",
+        "tests/test_graph.py",
+        "docs/architecture.md",
+        "Dockerfile",
+        "pyproject.toml"
+      ],
+      "dependency_files": {
+        "pyproject.toml": "dependencies = ['fastapi', 'langgraph', 'sqlalchemy']"
+      },
+      "expected_capabilities": {
+        "tool_calling": true,
+        "state_management": true,
+        "workflow_orchestration": true,
+        "multi_round_execution": true,
+        "memory": true,
+        "human_in_the_loop": true,
+        "persistence": true,
+        "evaluation": true
+      },
+      "expected_wrapper_risk": "low",
+      "expected_evidence_sources": ["readme", "tree", "dependency", "release", "issue"]
+    },
+    {
+      "id": "simple-wrapper",
+      "repository": {
+        "github_id": 9002,
+        "full_name": "fixture/simple-chat-wrapper",
+        "name": "simple-chat-wrapper",
+        "owner": "fixture",
+        "description": "Simple Streamlit chatbot wrapper around one LLM call",
+        "html_url": "https://github.com/fixture/simple-chat-wrapper",
+        "language": "Python",
+        "topics": ["chatbot", "streamlit"],
+        "stars": 20,
+        "forks": 2,
+        "open_issues": 0,
+        "default_branch": "main",
+        "is_fork": false,
+        "is_archived": false,
+        "has_readme": true,
+        "github_created_at": "2026-05-01T00:00:00Z",
+        "github_updated_at": "2026-07-09T00:00:00Z",
+        "pushed_at": "2026-07-09T00:00:00Z"
+      },
+      "readme_path": "README.md",
+      "readme_content": "A simple Streamlit chatbot that sends one prompt to an LLM and displays the answer.",
+      "tree_paths": ["app.py", "requirements.txt"],
+      "dependency_files": {
+        "requirements.txt": "streamlit\nopenai"
+      },
+      "expected_capabilities": {
+        "tool_calling": false,
+        "state_management": false,
+        "workflow_orchestration": false,
+        "multi_round_execution": false,
+        "memory": false,
+        "human_in_the_loop": false,
+        "persistence": false,
+        "evaluation": false
+      },
+      "expected_wrapper_risk": "high",
+      "expected_evidence_sources": ["readme", "tree", "dependency", "release", "issue"]
+    }
+  ],
+  "expected_top_repository": "fixture/langgraph-fastapi-agent"
+}

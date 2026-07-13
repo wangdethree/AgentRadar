@@ -46,9 +46,27 @@ CAPABILITY_GROUPS: dict[str, tuple[str, ...]] = {
 
 
 def _detect_terms(query: str, groups: dict[str, tuple[str, ...]]) -> list[str]:
-    """按定义顺序提取术语，保证输出稳定可测试。"""
+    """按定义顺序提取不重叠术语，避免短词造成重复和子串误判。"""
     lowered = query.lower()
-    return [name for name, aliases in groups.items() if any(alias in lowered for alias in aliases)]
+    occupied_spans: list[tuple[int, int]] = []
+    detected: list[str] = []
+    for name, aliases in groups.items():
+        matched_span: tuple[int, int] | None = None
+        for alias in aliases:
+            escaped = re.escape(alias)
+            prefix = r"(?<![a-z0-9])" if alias[0].isascii() and alias[0].isalnum() else ""
+            suffix = r"(?![a-z0-9])" if alias[-1].isascii() and alias[-1].isalnum() else ""
+            for match in re.finditer(f"{prefix}{escaped}{suffix}", lowered):
+                span = match.span()
+                if not any(span[0] < end and start < span[1] for start, end in occupied_spans):
+                    matched_span = span
+                    break
+            if matched_span is not None:
+                break
+        if matched_span is not None:
+            detected.append(name)
+            occupied_spans.append(matched_span)
+    return detected
 
 
 def _detect_exclusions(query: str) -> list[str]:

@@ -63,6 +63,7 @@ cd backend
 .venv/bin/ruff check .
 .venv/bin/mypy app
 .venv/bin/pytest
+.venv/bin/python -m app.evaluation evaluation/agent_cases.json --format markdown
 
 cd ../frontend
 npm run lint
@@ -103,3 +104,9 @@ npm run build
 - `DELETE /api/v1/ignored-repositories/{ignored_id}`：恢复被忽略的仓库。
 
 更多信息见 [API 文档](docs/api.md)。
+
+## Agent 评测
+
+仓库内置 5 条固定需求和 2 个可离线重放的仓库研究样本。评测覆盖条件提取、查询有效性、排除词泄漏、Agent 能力识别、套壳风险、错误项目过滤、推荐首位相关度、证据覆盖和文件路径幻觉，并在每次 CI 中运行。
+
+当前 `1.0.0` 基线的条件字段准确率、查询有效率、能力识别准确率、过滤召回率、首位推荐准确率和证据覆盖率均为 100%，排除词泄漏率与文件路径幻觉率均为 0%。详细口径、运行方式和限制见 [Agent 评测报告](docs/evaluation.md)。
