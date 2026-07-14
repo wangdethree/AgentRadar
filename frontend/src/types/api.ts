@@ -18,6 +18,7 @@ export interface RepositorySnapshot {
   stars: number
   forks: number
   open_issues: number
+  source: 'search' | 'repository' | 'trending' | 'demo'
   captured_at: string
 }
 
@@ -129,6 +130,7 @@ export interface TrendMetrics {
 
 export interface TrendingCardData {
   repository: RepositorySummary
+  data_source: 'github' | 'demo'
   category: string
   metrics: TrendMetrics
   quality_score: number
