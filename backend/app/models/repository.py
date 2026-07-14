@@ -59,6 +59,7 @@ class RepositorySnapshot(Base):
     stars: Mapped[int]
     forks: Mapped[int]
     open_issues: Mapped[int]
+    source: Mapped[str] = mapped_column(String(32), default="search", index=True)
     captured_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,

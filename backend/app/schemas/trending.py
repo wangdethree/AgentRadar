@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.github import RepositorySummary
 
 TrendConfidence = Literal["low", "medium", "high"]
+TrendDataSource = Literal["github", "demo"]
 
 
 class TrendMetrics(BaseModel):
@@ -28,6 +29,7 @@ class TrendingCard(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     repository: RepositorySummary
+    data_source: TrendDataSource
     category: str
     metrics: TrendMetrics
     quality_score: float = Field(ge=0, le=100)

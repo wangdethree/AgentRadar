@@ -118,6 +118,7 @@ def _save_snapshots(
                 stars=stars,
                 forks=forks,
                 open_issues=values.open_issues,
+                source="demo",
                 captured_at=captured_at,
             ),
         )
@@ -138,9 +139,7 @@ def _save_analysis(
             engineering_analysis=item.engineering,
             strengths=["具备可验证的 Agent 能力", "提供完整工程结构和部署资料"],
             weaknesses=["演示数据仅用于界面和趋势链路，不代表实时 GitHub 指标"],
-            evidence=[
-                EvidenceItem(source="demo_fixture", observation="来自版本化稳定演示数据")
-            ],
+            evidence=[EvidenceItem(source="demo_fixture", observation="来自版本化稳定演示数据")],
             reading_path=[
                 ReadingPathItem(path=path, reason="演示项目的推荐阅读入口")
                 for path in item.reading_path
@@ -165,13 +164,9 @@ def seed_demo_data(
         summary = _build_summary(item, reference_time)
         repository = repository_store.upsert(summary)
         session.execute(
-            delete(RepositorySnapshot).where(
-                RepositorySnapshot.repository_id == repository.id
-            )
+            delete(RepositorySnapshot).where(RepositorySnapshot.repository_id == repository.id)
         )
-        session.execute(
-            delete(AnalysisReport).where(AnalysisReport.repository_id == repository.id)
-        )
+        session.execute(delete(AnalysisReport).where(AnalysisReport.repository_id == repository.id))
         session.commit()
         _save_snapshots(repository_store, item, reference_time)
         _save_analysis(analysis_store, summary, item)

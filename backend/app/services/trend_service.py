@@ -118,9 +118,10 @@ class TrendService:
         *,
         limit: int = 20,
         category: str | None = None,
+        include_demo: bool = False,
         now: datetime | None = None,
     ) -> list[TrendingCard]:
-        """生成今日热门、本周上升或新项目潜力榜。"""
+        """生成真实榜单；演示快照必须由调用方显式开启。"""
         reference_time = now or datetime.now(UTC)
         repositories = list(
             self.session.scalars(
@@ -130,28 +131,42 @@ class TrendService:
             )
         )
         analysis_by_repository = self._latest_analyses()
-        raw_items: list[tuple[Repository, dict[str, int | float | str | None], str]] = []
+        raw_items: list[tuple[Repository, dict[str, int | float | str | None], str, str]] = []
         for repository in repositories:
             summary = RepositorySummary.model_validate(repository)
             repository_category = classify_repository(summary)
             if category and repository_category != category:
                 continue
+            allowed_sources = {"trending", "demo"} if include_demo else {"trending"}
+            trend_snapshots = [
+                snapshot for snapshot in repository.snapshots if snapshot.source in allowed_sources
+            ]
+            if not trend_snapshots:
+                continue
             metrics = calculate_window_metrics(
                 repository,
-                repository.snapshots,
+                trend_snapshots,
                 now=reference_time,
             )
+            # 日榜和周榜必须具备对应历史基线，不能用活跃度冒充增长数据。
+            if kind == "daily" and metrics["stars_24h"] is None:
+                continue
+            if kind == "weekly" and metrics["stars_7d"] is None:
+                continue
             if kind == "potential":
                 age_days = (reference_time - _as_utc(repository.github_created_at)).days
                 if age_days > 365 or repository.stars > 5000:
                     continue
-            raw_items.append((repository, metrics, repository_category))
+            data_source = (
+                "demo" if all(item.source == "demo" for item in trend_snapshots) else "github"
+            )
+            raw_items.append((repository, metrics, repository_category, data_source))
 
         maximum_daily = max((int(item[1]["stars_24h"] or 0) for item in raw_items), default=0)
         maximum_weekly = max((int(item[1]["stars_7d"] or 0) for item in raw_items), default=0)
         maximum_rate = max((float(item[1]["growth_rate_7d"] or 0) for item in raw_items), default=0)
         cards: list[TrendingCard] = []
-        for repository, raw, repository_category in raw_items:
+        for repository, raw, repository_category, data_source in raw_items:
             score = _calculate_trend_score(
                 repository,
                 raw,
@@ -172,6 +187,7 @@ class TrendService:
             cards.append(
                 TrendingCard(
                     repository=RepositorySummary.model_validate(repository),
+                    data_source=data_source,
                     category=repository_category,
                     metrics=trend_metrics,
                     quality_score=quality,

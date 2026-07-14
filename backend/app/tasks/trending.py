@@ -29,7 +29,11 @@ async def collect_trending_snapshots() -> dict[str, object]:
             for query in TRENDING_QUERIES:
                 qualified_query = f"{query} fork:false archived:false"
                 try:
-                    page = await service.search_and_persist(qualified_query, per_page=30)
+                    page = await service.search_and_persist(
+                        qualified_query,
+                        per_page=30,
+                        snapshot_source="trending",
+                    )
                 except GitHubAPIError as error:
                     errors.append({"query": query, "code": error.code})
                     continue

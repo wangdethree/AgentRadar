@@ -31,12 +31,14 @@ def test_seed_demo_data_is_repeatable_and_populates_trending() -> None:
         assert session.scalar(select(func.count()).select_from(Repository)) == 3
         assert session.scalar(select(func.count()).select_from(RepositorySnapshot)) == 9
         assert session.scalar(select(func.count()).select_from(AnalysisReport)) == 3
-        daily = TrendService(session).list_cards("daily", now=now)
-        weekly = TrendService(session).list_cards("weekly", now=now)
-        potential = TrendService(session).list_cards("potential", now=now)
+        assert TrendService(session).list_cards("daily", now=now) == []
+        daily = TrendService(session).list_cards("daily", include_demo=True, now=now)
+        weekly = TrendService(session).list_cards("weekly", include_demo=True, now=now)
+        potential = TrendService(session).list_cards("potential", include_demo=True, now=now)
 
     assert len(daily) == len(weekly) == len(potential) == 3
     assert daily[0].repository.full_name == "agentradar-demo/langgraph-research-agent"
+    assert daily[0].data_source == "demo"
     assert daily[0].metrics.stars_24h == 100
     assert weekly[0].metrics.stars_7d == 600
     assert daily[0].quality_score == 100

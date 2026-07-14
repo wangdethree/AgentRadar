@@ -57,6 +57,7 @@ class RepositoryRepository:
             stars=snapshot_data.stars,
             forks=snapshot_data.forks,
             open_issues=snapshot_data.open_issues,
+            source=snapshot_data.source,
         )
         if snapshot_data.captured_at is not None:
             snapshot.captured_at = snapshot_data.captured_at

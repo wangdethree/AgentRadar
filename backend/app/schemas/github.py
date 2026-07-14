@@ -1,9 +1,11 @@
 """GitHub API 的标准化数据结构。"""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+SnapshotSource = Literal["search", "repository", "trending", "demo"]
 
 
 class RepositorySummary(BaseModel):
@@ -74,6 +76,7 @@ class RepositorySnapshotData(BaseModel):
     stars: int
     forks: int
     open_issues: int
+    source: SnapshotSource = "search"
     captured_at: datetime | None = None
 
 
@@ -85,4 +88,5 @@ class RepositorySnapshotResponse(BaseModel):
     stars: int
     forks: int
     open_issues: int
+    source: SnapshotSource
     captured_at: datetime

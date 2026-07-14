@@ -3,7 +3,12 @@
 from sqlalchemy.orm import Session
 
 from app.repositories.repository_repository import RepositoryRepository
-from app.schemas.github import RepositorySearchPage, RepositorySummary
+from app.schemas.github import (
+    RepositorySearchPage,
+    RepositorySnapshotData,
+    RepositorySummary,
+    SnapshotSource,
+)
 from app.tools.github.client import GitHubClient
 from app.tools.github.repository import get_repository
 from app.tools.github.search import search_repositories
@@ -22,6 +27,7 @@ class RepositoryService:
         *,
         page: int = 1,
         per_page: int = 30,
+        snapshot_source: SnapshotSource = "search",
     ) -> RepositorySearchPage:
         """搜索仓库，并为每个候选保存最新数据和指标快照。"""
         result = await search_repositories(
@@ -32,13 +38,29 @@ class RepositoryService:
         )
         for summary in result.items:
             repository = self.store.upsert(summary)
-            self.store.save_snapshot(repository)
+            self.store.save_snapshot(
+                repository,
+                RepositorySnapshotData(
+                    stars=repository.stars,
+                    forks=repository.forks,
+                    open_issues=repository.open_issues,
+                    source=snapshot_source,
+                ),
+            )
         return result
 
     async def sync_repository(self, owner: str, repo: str) -> RepositorySummary:
         """读取单个仓库详情，并同步最新指标。"""
         summary = await get_repository(self.github_client, owner, repo)
         repository = self.store.upsert(summary)
-        self.store.save_snapshot(repository)
+        self.store.save_snapshot(
+            repository,
+            RepositorySnapshotData(
+                stars=repository.stars,
+                forks=repository.forks,
+                open_issues=repository.open_issues,
+                source="repository",
+            ),
+        )
         return summary
 
