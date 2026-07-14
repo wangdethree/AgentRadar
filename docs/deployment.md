@@ -10,6 +10,8 @@ cp .env.example .env
 
 至少修改 `.env` 中的 `POSTGRES_PASSWORD` 和 `COMPOSE_DATABASE_URL`，二者密码必须一致。建议同时配置 `GITHUB_TOKEN`，否则 GitHub 匿名 API 配额较低。
 
+如果当前网络无法访问 Docker Hub，可以仅在本机 `.env` 中把 `PYTHON_IMAGE`、`NODE_IMAGE`、`NGINX_IMAGE` 和 `POSTGRES_IMAGE` 替换为可信镜像代理的完整地址。Dockerfile 和 Compose 默认值仍使用官方镜像名称，不需要修改项目文件或 Docker Desktop 全局设置。
+
 模型增强是可选能力。接入兼容 OpenAI Chat Completions 协议的服务时设置：
 
 ```dotenv
