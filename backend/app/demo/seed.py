@@ -5,13 +5,15 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import create_database_engine, init_database
 from app.models.analysis import AnalysisReport
-from app.models.repository import RepositorySnapshot
+from app.models.interaction import Favorite, IgnoredRepository
+from app.models.repository import Repository, RepositorySnapshot
+from app.models.search import SearchResult
 from app.repositories.analysis_repository import AnalysisReportRepository
 from app.repositories.repository_repository import RepositoryRepository
 from app.schemas.analysis import (
@@ -173,17 +175,50 @@ def seed_demo_data(
     return len(dataset.repositories)
 
 
+def remove_demo_data(session: Session) -> int:
+    """删除内置演示仓库及依赖记录，保留全部真实 GitHub 数据。"""
+    repository_ids = list(
+        session.scalars(
+            select(Repository.id).where(Repository.full_name.like("agentradar-demo/%"))
+        )
+    )
+    if not repository_ids:
+        return 0
+
+    # 显式按依赖顺序删除，确保 PostgreSQL 与测试用 SQLite 行为一致。
+    for model in (
+        Favorite,
+        IgnoredRepository,
+        SearchResult,
+        AnalysisReport,
+        RepositorySnapshot,
+    ):
+        session.execute(delete(model).where(model.repository_id.in_(repository_ids)))
+    session.execute(delete(Repository).where(Repository.id.in_(repository_ids)))
+    session.commit()
+    return len(repository_ids)
+
+
 def main() -> None:
     """向配置的数据库写入演示数据。"""
     parser = argparse.ArgumentParser(description="加载 AgentRadar 稳定演示数据")
     parser.add_argument("--dataset", type=Path, default=default_dataset_path())
     parser.add_argument("--database-url", default=get_settings().database_url)
+    parser.add_argument(
+        "--remove",
+        action="store_true",
+        help="只删除 agentradar-demo/* 演示仓库，不写入演示数据",
+    )
     args = parser.parse_args()
     engine = create_database_engine(args.database_url)
     init_database(engine)
     with Session(engine) as session:
-        count = seed_demo_data(session, load_demo_dataset(args.dataset))
-    print(f"已写入 {count} 个演示仓库及其趋势快照和分析报告")
+        if args.remove:
+            count = remove_demo_data(session)
+            print(f"已删除 {count} 个演示仓库，真实 GitHub 数据保持不变")
+        else:
+            count = seed_demo_data(session, load_demo_dataset(args.dataset))
+            print(f"已写入 {count} 个演示仓库及其趋势快照和分析报告")
 
 
 if __name__ == "__main__":

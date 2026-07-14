@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.demo import load_demo_dataset, seed_demo_data
+from app.demo import load_demo_dataset, remove_demo_data, seed_demo_data
 from app.models import AnalysisReport, Base, Repository, RepositorySnapshot
 from app.services.trend_service import TrendService
 
@@ -42,3 +42,40 @@ def test_seed_demo_data_is_repeatable_and_populates_trending() -> None:
     assert daily[0].metrics.stars_24h == 100
     assert weekly[0].metrics.stars_7d == 600
     assert daily[0].quality_score == 100
+
+
+def test_remove_demo_data_preserves_real_repository() -> None:
+    """清理命令只能删除内置演示命名空间。"""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    dataset_path = Path(__file__).parents[2] / "demo" / "demo_data.json"
+    now = datetime(2026, 7, 13, 12, tzinfo=UTC)
+
+    with Session(engine) as session:
+        seed_demo_data(session, load_demo_dataset(dataset_path), now=now)
+        session.add(
+            Repository(
+                github_id=999,
+                full_name="real/agent-project",
+                name="agent-project",
+                owner="real",
+                html_url="https://github.com/real/agent-project",
+                stars=10,
+                forks=1,
+                open_issues=0,
+                github_created_at=now,
+                github_updated_at=now,
+            )
+        )
+        session.commit()
+
+        assert remove_demo_data(session) == 3
+        repositories = list(session.scalars(select(Repository)))
+
+        assert [item.full_name for item in repositories] == ["real/agent-project"]
+        assert session.scalar(select(func.count()).select_from(RepositorySnapshot)) == 0
+        assert session.scalar(select(func.count()).select_from(AnalysisReport)) == 0
