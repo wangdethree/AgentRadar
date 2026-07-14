@@ -8,7 +8,12 @@
 cp .env.example .env
 ```
 
-至少修改 `.env` 中的 `POSTGRES_PASSWORD` 和 `COMPOSE_DATABASE_URL`，二者密码必须一致。建议同时配置 `GITHUB_TOKEN`，否则 GitHub 匿名 API 配额较低。
+至少修改 `.env` 中的 `POSTGRES_PASSWORD` 和 `COMPOSE_DATABASE_URL`，二者密码必须一致。建议同时配置 `GITHUB_TOKEN`，否则 GitHub 匿名 API 配额较低。单后端副本需要真实热门雷达时还应设置：
+
+```dotenv
+TRENDING_SCHEDULER_ENABLED=true
+TRENDING_COLLECTION_INTERVAL_HOURS=6
+```
 
 如果当前网络无法访问 Docker Hub，可以仅在本机 `.env` 中把 `PYTHON_IMAGE`、`NODE_IMAGE`、`NGINX_IMAGE` 和 `POSTGRES_IMAGE` 替换为可信镜像代理的完整地址。Dockerfile 和 Compose 默认值仍使用官方镜像名称，不需要修改项目文件或 Docker Desktop 全局设置。
 
@@ -39,6 +44,16 @@ curl http://localhost:8080/healthz
 
 后端容器会先执行 `alembic upgrade head`，成功后才启动 Uvicorn。PostgreSQL 数据保存在 `postgres-data` 命名卷中，普通的容器重建不会清空数据。
 
+## 采集真实热门快照
+
+调度器启用后会在后端启动时立即采集一次，之后按配置间隔保存固定 Agent 主题的 GitHub 指标。也可以随时手动执行：
+
+```bash
+docker compose exec backend python -m app.collect_trending
+```
+
+输出会列出查询数、采集仓库数和失败查询。真实日榜需要至少 24 小时前的基线，真实周榜需要至少 7 天前的基线；在窗口形成前返回空榜并显示“快照积累中”，不会使用总 Star 伪造增量。
+
 ## 加载稳定 Demo 数据
 
 服务健康后执行：
@@ -47,9 +62,15 @@ curl http://localhost:8080/healthz
 docker compose exec backend python -m app.demo
 ```
 
-命令会写入 3 个演示仓库、9 个趋势快照和 3 份分析报告。重复运行会覆盖这些演示仓库的快照和报告，不会持续累积重复数据。刷新首页后，“今日热门”“本周上升”“新项目潜力”都会有稳定内容。
+命令会写入 3 个演示仓库、9 个趋势快照和 3 份分析报告。重复运行会覆盖这些演示仓库的快照和报告，不会持续累积重复数据。刷新首页并开启“显示演示数据”后，三个榜单都会有稳定内容。
 
-演示仓库名称以 `agentradar-demo/` 开头，GitHub 链接仅用于界面展示；指标和分析明确来自固定数据，不应当作实时 GitHub 事实。
+演示仓库名称以 `agentradar-demo/` 开头，默认不会进入真实榜单，页面与 API 都会标记为 `demo`。GitHub 链接仅用于界面展示；指标和分析来自固定数据，不应当作实时 GitHub 事实。需要清理时执行：
+
+```bash
+docker compose exec backend python -m app.demo --remove
+```
+
+该命令只删除 `agentradar-demo/*` 及其依赖记录，不影响真实搜索和真实趋势快照。
 
 ## 常用运维命令
 
@@ -57,6 +78,7 @@ docker compose exec backend python -m app.demo
 docker compose logs -f backend
 docker compose logs -f frontend
 docker compose exec backend alembic current
+docker compose exec backend python -m app.collect_trending
 docker compose exec backend python -m app.evaluation evaluation/agent_cases.json
 docker compose restart backend
 docker compose down

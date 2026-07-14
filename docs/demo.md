@@ -43,7 +43,7 @@ docker compose exec backend python -m app.evaluation evaluation/agent_cases.json
 - 快照置信度和升温原因；
 - LangGraph、Agent Memory、MCP 等分类。
 
-指出这些页面使用稳定 Demo 快照，因此断网演示也不会出现空榜单。
+打开“显示演示数据”开关，指出演示卡片带有醒目标识且默认不会混入真实榜单。关闭开关后展示真实采集状态，并说明日榜和周榜分别需要 24 小时、7 天的历史窗口。
 
 ## 3:40—4:25 工程与可信度
 

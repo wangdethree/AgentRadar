@@ -74,7 +74,7 @@ jobs:
       - name: 加载并验证 Demo 数据
         run: |
           docker compose exec -T backend python -m app.demo
-          curl --fail http://localhost:8000/api/v1/trending/daily \
+          curl --fail 'http://localhost:8000/api/v1/trending/daily?include_demo=true' \
             | python3 -c 'import json,sys; assert len(json.load(sys.stdin)) == 3'
       - name: 输出容器日志
         if: failure()

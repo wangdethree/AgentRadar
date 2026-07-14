@@ -27,7 +27,7 @@ GET /api/v1/repositories/{owner}/{repo}/snapshots?days=30
 
 README 默认最多读取 300 KB，普通文件默认最多读取 200 KB。目录树默认深度为 3，最多返回 1000 项，避免把无关大段内容送入模型。
 
-`snapshots` 按时间正序返回最近 1～365 天内最多 1000 个真实指标点，默认 30 天、500 个点。接口不会对缺失日期插值；前端少于两个点时会显示“等待积累”，避免伪造趋势。
+`snapshots` 按时间正序返回最近 1～365 天内最多 1000 个指标点，默认 30 天、500 个点。每条快照带有 `search`、`repository`、`trending` 或 `demo` 来源；接口不会对缺失日期插值，前端少于两个点时会显示“等待积累”，避免伪造趋势。
 
 ## 错误格式
 
@@ -102,7 +102,9 @@ GET /api/v1/trending/potential
 GET /api/v1/trending/categories
 ```
 
-榜单支持 `limit` 和 `category` 查询参数。趋势响应同时显示热度分、质量分、Agent 能力完整度和快照置信度。设置 `TRENDING_SCHEDULER_ENABLED=true` 后，单进程部署会按照配置间隔自动采集固定主题；多副本部署应将任务迁移到独立 Worker。
+榜单支持 `limit`、`category` 和 `include_demo` 查询参数。默认只使用来源为 `trending` 的真实定时快照；只有 `include_demo=true` 时才会加入稳定演示数据，响应中的 `data_source` 会明确标记 `github` 或 `demo`。
+
+日榜必须拥有至少 24 小时前的真实基线，周榜必须拥有至少 7 天前的真实基线，否则不会用当前 Star 或活跃度伪造增长。趋势响应同时显示热度分、质量分、Agent 能力完整度和快照置信度。设置 `TRENDING_SCHEDULER_ENABLED=true` 后，单进程部署会按照配置间隔自动采集固定主题；多副本部署应将任务迁移到独立 Worker。
 
 ## 收藏与忽略
 

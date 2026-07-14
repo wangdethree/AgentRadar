@@ -75,7 +75,7 @@ erDiagram
 ```
 
 - `repositories` 保存最新元数据，使用 GitHub ID 和 `full_name` 双重防重；
-- `repository_snapshots` 是趋势计算的原始事实，不覆盖历史；
+- `repository_snapshots` 是趋势计算的原始事实，不覆盖历史，并通过来源字段隔离普通搜索、定时采集和演示数据；
 - `analysis_reports` 保存能力、工程、证据和阅读路径，继续筛选可以复用；
 - `search_sessions`、`search_results`、`execution_traces` 共同支持状态、结果和可解释轨迹；
 - `favorites` 与 `ignored_repositories` 独立存储用户动作，忽略规则在深度研究前生效。
@@ -87,5 +87,6 @@ erDiagram
 - README、文件和目录树都有大小、深度和数量上限；
 - 阅读路径只能从真实目录树选取，固定评测要求幻觉率为 0；
 - PostgreSQL 使用 Alembic 迁移，容器启动时自动升级到 `head`；
+- 热门榜默认只读取定时采集快照，演示数据必须显式开启，历史窗口不足时不返回伪增长；
 - 热门采集器只适合单后端副本，多副本部署必须迁移到独立 Worker；
 - CI 同时执行静态检查、单元/集成测试、前端构建和 Agent 固定评测。

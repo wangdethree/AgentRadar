@@ -59,6 +59,8 @@ docker compose exec backend python -m app.demo
 
 Compose 默认启动 PostgreSQL 16、Python 3.11 后端和前端 Nginx。容器启动后，统一入口为 <http://localhost:8080>，后端 API 仍可通过 <http://localhost:8000> 直接访问。首次启动前请修改 `.env` 的 PostgreSQL 密码和对应连接串，完整步骤见 [部署文档](docs/deployment.md)。
 
+真实热门雷达需要在 `.env` 设置 `TRENDING_SCHEDULER_ENABLED=true`。后端启动时会立即采集一次，之后默认每 6 小时保存 GitHub 快照；也可以手动执行 `docker compose exec backend python -m app.collect_trending`。日榜至少需要覆盖 24 小时，周榜至少需要覆盖 7 天，历史不足时页面会明确显示积累状态。演示数据默认隐藏，只能通过页面开关显式查看。
+
 ### 可选模型增强
 
 智能搜索默认使用确定性规则，可在无模型、无费用的环境运行。配置兼容 OpenAI Chat Completions 协议的 `LLM_BASE_URL` 与 `LLM_MODEL` 后，系统会用结构化模型增强需求解析和候选调查等级判断；`LLM_API_KEY` 按服务要求选填。模型超时、限流、网络错误或结构校验失败时，当前搜索会自动回退到规则结果，不会中断 GitHub 研究流程。
@@ -103,9 +105,9 @@ npm run build
 - `GET /api/v1/search/sessions/{session_id}`：查看会话状态与搜索计划；
 - `GET /api/v1/search/sessions/{session_id}/results`：查看阶段结果；
 - `GET /api/v1/search/sessions/{session_id}/traces`：查看可解释执行轨迹；
-- `GET /api/v1/trending/daily`：今日热门；
-- `GET /api/v1/trending/weekly`：本周上升；
-- `GET /api/v1/trending/potential`：新项目潜力；
+- `GET /api/v1/trending/daily`：基于真实定时快照的今日热门；
+- `GET /api/v1/trending/weekly`：基于真实定时快照的本周上升；
+- `GET /api/v1/trending/potential`：真实新项目潜力；
 - `GET /api/v1/trending/categories`：热门项目分类；
 - `POST /api/v1/favorites`：收藏已经同步的仓库；
 - `GET /api/v1/favorites`：查看收藏列表；
